@@ -71,8 +71,17 @@ class PhotoViewModel(application: Application) : AndroidViewModel(application) {
     // Called after the system dialog (from PendingIntent) returns a success
     fun finalizeDeletion() {
         viewModelScope.launch {
+            val deletedUris = _photosToDelete.value
+            if (deletedUris.isNotEmpty()) {
+                val currentPhotos = _photos.value
+                val updatedPhotos = currentPhotos.filterNot { it in deletedUris }
+                _photos.value = updatedPhotos
+
+                if (updatedPhotos.isEmpty()) {
+                    loadPhotos()
+                }
+            }
             _photosToDelete.value = emptySet()
-            loadPhotos() // Reload a new batch
         }
     }
 
@@ -101,7 +110,7 @@ class PhotoViewModel(application: Application) : AndroidViewModel(application) {
                     photoUris.add(contentUri)
                 }
             }
-            _photos.value = photoUris.shuffled().take(10) // Keep the change to 10 photos
+            _photos.value = photoUris.shuffled().take(16) // Keep the change to 16 photos
         }
     }
 }

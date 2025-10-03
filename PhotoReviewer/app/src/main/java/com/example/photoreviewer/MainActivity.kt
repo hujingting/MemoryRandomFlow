@@ -69,7 +69,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupViewPager() {
         photoAdapter = PhotoAdapter()
+        binding.photoViewPager.orientation = ViewPager2.ORIENTATION_VERTICAL
         binding.photoViewPager.adapter = photoAdapter
+
     }
 
     private fun setupDeleteButton() {
@@ -80,7 +82,7 @@ class MainActivity : AppCompatActivity() {
             if (currentPhotoUri != null) {
                 viewModel.clearDeletionList() // Ensure only one photo is marked
                 viewModel.markPhotoForDeletion(currentPhotoUri)
-                showDeleteConfirmationDialog()
+                viewModel.requestDeleteMarkedPhotos(contentResolver)
             }
         }
     }
@@ -121,25 +123,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun showDeleteConfirmationDialog() {
-        if (viewModel.photosToDelete.value.isEmpty()) return
-
-        val photoCount = viewModel.photosToDelete.value.size // Will be 1 in this simplified flow
-
-        MaterialAlertDialogBuilder(this)
-            .setTitle("移至回收站")
-            .setMessage("要将这张照片移至回收站吗？") // Singular message
-            .setNegativeButton("取消") { dialog, _ ->
-                viewModel.clearDeletionList()
-                // No need to reload photos here, as deletion wasn't confirmed
-                dialog.dismiss()
-            }
-            .setPositiveButton("移至回收站") { dialog, _ ->
-                viewModel.requestDeleteMarkedPhotos(contentResolver)
-                dialog.dismiss()
-            }
-            .show()
-    }
 
     private fun requestPermission() {
         val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
