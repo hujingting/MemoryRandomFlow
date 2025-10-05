@@ -3,16 +3,15 @@ package com.example.photoreviewer
 import android.Manifest
 import android.app.Activity
 import android.content.pm.PackageManager
+import android.graphics.Canvas
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
-import android.view.View.OnClickListener
 import android.view.ViewGroup
-import android.widget.AdapterView.OnItemClickListener
 import android.widget.ImageView
-import android.widget.TextView
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
@@ -21,13 +20,16 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.recyclerview.widget.DefaultItemAnimator
+import androidx.recyclerview.widget.ItemTouchHelper
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.PagerSnapHelper
 import androidx.recyclerview.widget.RecyclerView
-import androidx.viewpager2.widget.ViewPager2
 import coil.load
 import com.example.photoreviewer.databinding.ActivityMainBinding
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 class MainActivity : AppCompatActivity() {
 
@@ -41,7 +43,6 @@ class MainActivity : AppCompatActivity() {
         if (isGranted) {
             viewModel.loadPhotos()
         } else {
-            // Handle permission denial
             binding.infoText.text = "需要读取照片的权限"
             binding.infoText.visibility = View.VISIBLE
         }
@@ -52,6 +53,9 @@ class MainActivity : AppCompatActivity() {
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             viewModel.finalizeDeletion()
+        } else {
+            // If user cancels deletion, reload photos to restore the swiped item
+            viewModel.loadPhotos()
         }
     }
 
@@ -60,29 +64,47 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        setupViewPager()
+        setupRecyclerView()
         observeViewModel()
         requestPermission()
         setupDeleteButton()
         setupRandomizeButton()
     }
 
-    private fun setupViewPager() {
-        photoAdapter = PhotoAdapter()
-        binding.photoViewPager.orientation = ViewPager2.ORIENTATION_VERTICAL
-        binding.photoViewPager.adapter = photoAdapter
+    private fun setupRecyclerView() {
+        photoAdapter = PhotoAdapter(
+            onDelete = {
+                viewModel.markPhotoForDeletion(it)
+                viewModel.requestDeleteMarkedPhotos(contentResolver)
+            },
+            onFavorite = {
+                viewModel.favoritePhoto(it)
+            }
+        )
 
+        binding.photoRecyclerView.apply {
+            adapter = photoAdapter
+            layoutManager = LinearLayoutManager(this@MainActivity)
+            itemAnimator = DefaultItemAnimator()
+        }
+
+        val itemTouchHelper = ItemTouchHelper(SwipeCallback(photoAdapter))
+        itemTouchHelper.attachToRecyclerView(binding.photoRecyclerView)
+
+        val snapHelper = PagerSnapHelper()
+        snapHelper.attachToRecyclerView(binding.photoRecyclerView)
     }
 
     private fun setupDeleteButton() {
         binding.deleteButton.setOnClickListener {
-            val currentPosition = binding.photoViewPager.currentItem
-            val currentPhotoUri = photoAdapter.getPhotoUri(currentPosition)
-
-            if (currentPhotoUri != null) {
-                viewModel.clearDeletionList() // Ensure only one photo is marked
-                viewModel.markPhotoForDeletion(currentPhotoUri)
-                viewModel.requestDeleteMarkedPhotos(contentResolver)
+            val snappedPosition = (binding.photoRecyclerView.layoutManager as LinearLayoutManager).findFirstCompletelyVisibleItemPosition()
+            if (snappedPosition != RecyclerView.NO_POSITION) {
+                val photoUri = photoAdapter.getPhotoUri(snappedPosition)
+                if (photoUri != null) {
+                    viewModel.clearDeletionList()
+                    viewModel.markPhotoForDeletion(photoUri)
+                    viewModel.requestDeleteMarkedPhotos(contentResolver)
+                }
             }
         }
     }
@@ -100,12 +122,6 @@ class MainActivity : AppCompatActivity() {
                     viewModel.photos.collect { photos ->
                         binding.infoText.visibility = if (photos.isEmpty()) View.VISIBLE else View.GONE
                         photoAdapter.submitList(photos)
-                        // Reset ViewPager position if current position is out of bounds
-                        if (binding.photoViewPager.currentItem >= photos.size && photos.isNotEmpty()) {
-                            binding.photoViewPager.currentItem = photos.size - 1
-                        } else if (photos.isEmpty()) {
-                            binding.photoViewPager.currentItem = 0
-                        }
                     }
                 }
 
@@ -122,7 +138,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-
 
     private fun requestPermission() {
         val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -142,7 +157,10 @@ class MainActivity : AppCompatActivity() {
     }
 }
 
-class PhotoAdapter : RecyclerView.Adapter<PhotoAdapter.PhotoViewHolder>() {
+class PhotoAdapter(
+    val onDelete: (Uri) -> Unit,
+    val onFavorite: (Uri) -> Unit
+) : RecyclerView.Adapter<PhotoAdapter.PhotoViewHolder>() {
 
     private val photos = mutableListOf<Uri>()
 
@@ -152,7 +170,13 @@ class PhotoAdapter : RecyclerView.Adapter<PhotoAdapter.PhotoViewHolder>() {
     }
 
     override fun onBindViewHolder(holder: PhotoViewHolder, position: Int) {
-        holder.bind(photos[position])
+        val photoUri = photos[position]
+        holder.bind(photoUri)
+        holder.itemView.setOnClickListener {
+            val context = holder.itemView.context
+            val intent = PhotoDetailActivity.newIntent(context, photoUri)
+            context.startActivity(intent)
+        }
     }
 
     override fun getItemCount(): Int = photos.size
@@ -160,17 +184,85 @@ class PhotoAdapter : RecyclerView.Adapter<PhotoAdapter.PhotoViewHolder>() {
     fun submitList(newPhotos: List<Uri>) {
         photos.clear()
         photos.addAll(newPhotos)
-        notifyDataSetChanged() // This is simple, for a real app use DiffUtil
+        notifyDataSetChanged()
     }
 
     fun getPhotoUri(position: Int): Uri? {
         return if (position >= 0 && position < photos.size) photos[position] else null
     }
 
+    fun removeAt(position: Int) {
+        if (position < photos.size) {
+            photos.removeAt(position)
+            notifyItemRemoved(position)
+        }
+    }
+
     class PhotoViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        private val imageView: ImageView = itemView.findViewById(R.id.photo_image_view)
+        val imageView: ImageView = itemView.findViewById(R.id.photo_image_view)
+        val deleteIndicator: View = itemView.findViewById(R.id.delete_indicator_layout)
+        val favoriteIndicator: View = itemView.findViewById(R.id.favorite_indicator_layout)
+
         fun bind(uri: Uri) {
             imageView.load(uri)
+            deleteIndicator.visibility = View.GONE
+            favoriteIndicator.visibility = View.GONE
         }
+    }
+}
+
+class SwipeCallback(private val adapter: PhotoAdapter) : ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT) {
+
+    override fun onMove(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder): Boolean {
+        return false
+    }
+
+    override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
+        val position = viewHolder.adapterPosition
+        if (position == RecyclerView.NO_POSITION) return
+        val photoUri = adapter.getPhotoUri(position) ?: return
+
+        if (direction == ItemTouchHelper.LEFT) {
+            adapter.onDelete(photoUri)
+            // Don't remove immediately, wait for confirmation or cancellation
+        } else if (direction == ItemTouchHelper.RIGHT) {
+            adapter.onFavorite(photoUri)
+            adapter.removeAt(position)
+        }
+    }
+
+    override fun onChildDraw(c: Canvas, recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder, dX: Float, dY: Float, actionState: Int, isCurrentlyActive: Boolean) {
+        if (actionState == ItemTouchHelper.ACTION_STATE_SWIPE) {
+            val holder = viewHolder as PhotoAdapter.PhotoViewHolder
+            val viewWidth = holder.itemView.width.toFloat()
+            val alpha = 1.0f - abs(dX) / viewWidth
+
+            holder.imageView.alpha = alpha
+            holder.itemView.rotation = dX / viewWidth * 20 // Rotate the whole card
+
+            if (dX > 0) { // Swiping Right (Favorite)
+                holder.favoriteIndicator.visibility = View.VISIBLE
+                holder.deleteIndicator.visibility = View.GONE
+            } else if (dX < 0) { // Swiping Left (Delete)
+                holder.deleteIndicator.visibility = View.VISIBLE
+                holder.favoriteIndicator.visibility = View.GONE
+            } else {
+                holder.deleteIndicator.visibility = View.GONE
+                holder.favoriteIndicator.visibility = View.GONE
+            }
+        }
+        super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive)
+    }
+
+    override fun clearView(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder) {
+        super.clearView(recyclerView, viewHolder)
+        val holder = viewHolder as PhotoAdapter.PhotoViewHolder
+        // Reset foreground photo view
+        holder.imageView.alpha = 1.0f
+        // Reset the whole card rotation
+        holder.itemView.rotation = 0f
+        // Hide indicators
+        holder.deleteIndicator.visibility = View.GONE
+        holder.favoriteIndicator.visibility = View.GONE
     }
 }

@@ -85,6 +85,11 @@ class PhotoViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun favoritePhoto(uri: Uri) {
+        // For now, just log this action. A real implementation would save this to a database.
+        Log.d("PhotoViewModel", "Favorited photo: $uri")
+    }
+
     fun loadPhotos() {
         viewModelScope.launch {
             val photoUris = mutableListOf<Uri>()
