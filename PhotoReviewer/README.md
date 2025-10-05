@@ -1,14 +1,14 @@
-# PhotoReviewer
+# 回流 (PhotoReviewer)
 
-PhotoReviewer 是一款简洁的 Android 应用，旨在帮助用户快速回顾和整理手机相册。通过简单的滑动手势，您可以轻松地标记并批量删除不需要的照片，从而释放存储空间。
+“回流”是一款简洁的 Android 应用，旨在帮助用户快速回顾和整理手机相册。通过简单的滑动手势，您可以轻松地标记并批量删除不需要的照片，从而释放存储空间。
 
 ## ✨ 功能特性
 
-- **手势驱动**: 向上滑动即可将照片标记为待删除，操作直观高效。
+- **手势驱动**: 基于 `ViewPager2` 实现，通过左右滑动轻松切换照片，向上滑动即可将照片标记为待删除，操作直观高效。
 - **批量处理**: 浏览完一组照片后，可以一次性确认删除所有已标记的照片。
 - **安全确认**: 在执行删除操作前，会弹出对话框进行二次确认，防止误删。
 - **权限处理**: 在应用启动时会妥善处理相册读取权限的申请。
-- **现代化 UI**: 使用 Jetpack Compose 构建，支持系统深色、浅色主题，并适配了 Android 12+ 的动态色彩。
+- **现代化 UI**: 使用 Material 3 主题，界面干净整洁，并能自动适配系统的深色和浅色模式。
 
 ## 📱 工作流程
 
@@ -23,11 +23,12 @@ PhotoReviewer 是一款简洁的 Android 应用，旨在帮助用户快速回顾
 ## 🛠️ 技术栈
 
 - **语言**: [Kotlin](https://kotlinlang.org/)
-- **UI 框架**: [Jetpack Compose](https://developer.android.com/jetpack/compose)
+- **UI**: Android View System (XML Layouts)
+- **主要组件**: `ViewPager2`, `ConstraintLayout`, [Material Components](https://material.io/develop/android)
 - **架构模式**: MVVM (Model-View-ViewModel)
 - **异步处理**: [Kotlin Coroutines](https://kotlinlang.org/docs/coroutines-overview.html)
 - **图片加载**: [Coil](https://coil-kt.github.io/coil/)
-- **核心组件**: AndroidX, Lifecycle, ViewModel
+- **核心组件**: AndroidX, Lifecycle, ViewModel, ViewBinding
 
 ## 🚀 如何构建
 
@@ -46,3 +47,4 @@ PhotoReviewer 是一款简洁的 Android 应用，旨在帮助用户快速回顾
 
 - `android.permission.READ_MEDIA_IMAGES` (Android 13+)
 - `android.permission.READ_EXTERNAL_STORAGE` (Android 13 以下)
+- `android.permission.ACCESS_MEDIA_LOCATION` (用于访问照片的地理位置信息)

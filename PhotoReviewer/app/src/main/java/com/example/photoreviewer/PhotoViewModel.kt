@@ -26,25 +26,48 @@ class PhotoViewModel(application: Application) : AndroidViewModel(application) {
     private val _photos = MutableStateFlow<List<Uri>>(emptyList())
     val photos = _photos.asStateFlow()
 
-    private val _photosToDelete = MutableStateFlow<Set<Uri>>(emptySet())
+    private val _photosToDelete = MutableStateFlow<List<Pair<Uri, Int>>>(emptyList())
     val photosToDelete = _photosToDelete.asStateFlow()
+
+    private val _canUndo = MutableStateFlow(false)
+    val canUndo = _canUndo.asStateFlow()
+
+    private val _photoToRestore = MutableSharedFlow<Pair<Uri, Int>>()
+    val photoToRestore = _photoToRestore.asSharedFlow()
 
     private val _deletionRequest = MutableSharedFlow<DeletionRequest>()
     val deletionRequest = _deletionRequest.asSharedFlow()
 
-    fun markPhotoForDeletion(uri: Uri) {
-        _photosToDelete.value = _photosToDelete.value + uri
+    fun markPhotoForDeletion(uri: Uri, position: Int) {
+        _photosToDelete.value = _photosToDelete.value + Pair(uri, position)
+        _canUndo.value = true
+    }
+
+    fun undoLastDeletion() {
+        viewModelScope.launch {
+            val currentDeletions = _photosToDelete.value
+            if (currentDeletions.isNotEmpty()) {
+                val pairToRestore = currentDeletions.last()
+                _photosToDelete.value = currentDeletions.dropLast(1)
+                _photoToRestore.emit(pairToRestore)
+                if (_photosToDelete.value.isEmpty()) {
+                    _canUndo.value = false
+                }
+            }
+        }
     }
 
     fun clearDeletionList() {
-        _photosToDelete.value = emptySet()
+        _photosToDelete.value = emptyList()
     }
 
     // Called after the user confirms deletion in our custom dialog
     fun requestDeleteMarkedPhotos(contentResolver: ContentResolver) {
         viewModelScope.launch {
-            val urisToDelete = _photosToDelete.value.toList()
-            if (urisToDelete.isEmpty()) return@launch
+            val pairsToDelete = _photosToDelete.value
+            if (pairsToDelete.isEmpty()) return@launch
+
+            val urisToDelete = pairsToDelete.map { it.first }
 
             try {
                 Log.d("PhotoViewModel", "Android SDK: ${Build.VERSION.SDK_INT}")
@@ -71,8 +94,9 @@ class PhotoViewModel(application: Application) : AndroidViewModel(application) {
     // Called after the system dialog (from PendingIntent) returns a success
     fun finalizeDeletion() {
         viewModelScope.launch {
-            val deletedUris = _photosToDelete.value
-            if (deletedUris.isNotEmpty()) {
+            val deletedPairs = _photosToDelete.value
+            if (deletedPairs.isNotEmpty()) {
+                val deletedUris = deletedPairs.map { it.first }.toSet()
                 val currentPhotos = _photos.value
                 val updatedPhotos = currentPhotos.filterNot { it in deletedUris }
                 _photos.value = updatedPhotos
@@ -81,7 +105,7 @@ class PhotoViewModel(application: Application) : AndroidViewModel(application) {
                     loadPhotos()
                 }
             }
-            _photosToDelete.value = emptySet()
+            _photosToDelete.value = emptyList()
         }
     }
 
@@ -91,6 +115,13 @@ class PhotoViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun loadPhotos() {
+        if (_photos.value.isNotEmpty()) {
+            return
+        }
+        randomizePhotos()
+    }
+
+    fun randomizePhotos() {
         viewModelScope.launch {
             val photoUris = mutableListOf<Uri>()
             val contentResolver = getApplication<Application>().contentResolver

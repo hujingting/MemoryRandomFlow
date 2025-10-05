@@ -69,13 +69,19 @@ class MainActivity : AppCompatActivity() {
         requestPermission()
         setupDeleteButton()
         setupRandomizeButton()
+        setupUndoButton()
+    }
+
+    private fun setupUndoButton() {
+        binding.undoButton.setOnClickListener {
+            viewModel.undoLastDeletion()
+        }
     }
 
     private fun setupRecyclerView() {
         photoAdapter = PhotoAdapter(
             onDelete = {
-                viewModel.markPhotoForDeletion(it)
-                viewModel.requestDeleteMarkedPhotos(contentResolver)
+                uri, position -> viewModel.markPhotoForDeletion(uri, position)
             },
             onFavorite = {
                 viewModel.favoritePhoto(it)
@@ -97,13 +103,22 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupDeleteButton() {
         binding.deleteButton.setOnClickListener {
-            val snappedPosition = (binding.photoRecyclerView.layoutManager as LinearLayoutManager).findFirstCompletelyVisibleItemPosition()
-            if (snappedPosition != RecyclerView.NO_POSITION) {
-                val photoUri = photoAdapter.getPhotoUri(snappedPosition)
-                if (photoUri != null) {
-                    viewModel.clearDeletionList()
-                    viewModel.markPhotoForDeletion(photoUri)
-                    viewModel.requestDeleteMarkedPhotos(contentResolver)
+            if (viewModel.photosToDelete.value.isNotEmpty()) {
+                // If there are photos marked for deletion, delete them
+                viewModel.requestDeleteMarkedPhotos(contentResolver)
+            } else {
+                // Otherwise, delete the currently visible photo
+                val layoutManager = binding.photoRecyclerView.layoutManager as LinearLayoutManager
+                val position = layoutManager.findFirstCompletelyVisibleItemPosition()
+                if (position != RecyclerView.NO_POSITION) {
+                    photoAdapter.getPhotoUri(position)?.let { uri ->
+                        // Mark for deletion (so it can be undone)
+                        viewModel.markPhotoForDeletion(uri, position)
+                        // Remove from the UI immediately
+                        photoAdapter.removeAt(position)
+                        // Request the actual deletion from the system
+                        viewModel.requestDeleteMarkedPhotos(contentResolver)
+                    }
                 }
             }
         }
@@ -111,7 +126,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupRandomizeButton() {
         binding.randomizeButton.setOnClickListener {
-            viewModel.loadPhotos()
+            viewModel.randomizePhotos()
+            binding.photoRecyclerView.scrollToPosition(0)
         }
     }
 
@@ -122,6 +138,19 @@ class MainActivity : AppCompatActivity() {
                     viewModel.photos.collect { photos ->
                         binding.infoText.visibility = if (photos.isEmpty()) View.VISIBLE else View.GONE
                         photoAdapter.submitList(photos)
+                    }
+                }
+
+                launch {
+                    viewModel.photoToRestore.collect { pair ->
+                        photoAdapter.addPhoto(pair.second, pair.first)
+                        binding.photoRecyclerView.scrollToPosition(pair.second)
+                    }
+                }
+
+                launch {
+                    viewModel.canUndo.collect { canUndo ->
+                        binding.undoButton.visibility = if (canUndo) View.VISIBLE else View.GONE
                     }
                 }
 
@@ -158,7 +187,7 @@ class MainActivity : AppCompatActivity() {
 }
 
 class PhotoAdapter(
-    val onDelete: (Uri) -> Unit,
+    val onDelete: (Uri, Int) -> Unit,
     val onFavorite: (Uri) -> Unit
 ) : RecyclerView.Adapter<PhotoAdapter.PhotoViewHolder>() {
 
@@ -189,6 +218,11 @@ class PhotoAdapter(
 
     fun getPhotoUri(position: Int): Uri? {
         return if (position >= 0 && position < photos.size) photos[position] else null
+    }
+
+    fun addPhoto(position: Int, uri: Uri) {
+        photos.add(position, uri)
+        notifyItemInserted(position)
     }
 
     fun removeAt(position: Int) {
@@ -223,8 +257,8 @@ class SwipeCallback(private val adapter: PhotoAdapter) : ItemTouchHelper.SimpleC
         val photoUri = adapter.getPhotoUri(position) ?: return
 
         if (direction == ItemTouchHelper.LEFT) {
-            adapter.onDelete(photoUri)
-            // Don't remove immediately, wait for confirmation or cancellation
+            adapter.onDelete(photoUri, position) // Pass position along with Uri
+            adapter.removeAt(position) // Remove from UI
         } else if (direction == ItemTouchHelper.RIGHT) {
             adapter.onFavorite(photoUri)
             adapter.removeAt(position)
