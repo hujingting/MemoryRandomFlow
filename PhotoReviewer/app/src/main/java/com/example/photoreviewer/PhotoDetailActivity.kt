@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.widget.TextView
+import android.view.Window
 import androidx.appcompat.app.AppCompatActivity
 import androidx.exifinterface.media.ExifInterface
 import androidx.lifecycle.lifecycleScope
@@ -26,8 +27,10 @@ class PhotoDetailActivity : AppCompatActivity() {
     private lateinit var locationTextView: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        window.requestFeature(Window.FEATURE_CONTENT_TRANSITIONS)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_photo_detail)
+        postponeEnterTransition()
 
         val photoUri: Uri? = intent?.data
         val imageView: ZoomableImageView = findViewById(R.id.photo_detail_view)
@@ -36,7 +39,12 @@ class PhotoDetailActivity : AppCompatActivity() {
         locationTextView = findViewById(R.id.location_text_view)
 
         if (photoUri != null) {
-            imageView.load(photoUri)
+            imageView.load(photoUri) {
+                listener(
+                    onSuccess = { _, _ -> startPostponedEnterTransition() },
+                    onError = { _, _ -> startPostponedEnterTransition() }
+                )
+            }
             loadPhotoMetadata(photoUri)
         } else {
             finish()

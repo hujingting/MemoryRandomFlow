@@ -8,7 +8,8 @@
     <com.example.photoreviewer.ZoomableImageView
         android:id="@+id/photo_detail_view"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent"
+        android:transitionName="photo_transition" />
 
     <LinearLayout
         android:layout_width="match_parent"

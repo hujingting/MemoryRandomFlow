@@ -2,6 +2,8 @@ package com.example.photoreviewer
 
 import android.Manifest
 import android.app.Activity
+import android.app.ActivityOptions
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Canvas
 import android.net.Uri
@@ -15,6 +17,7 @@ import android.widget.ImageView
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
@@ -70,6 +73,19 @@ class MainActivity : AppCompatActivity() {
         setupDeleteButton()
         setupRandomizeButton()
         setupUndoButton()
+        setupSettingsFab()
+    }
+
+    private fun setupSettingsFab() {
+        binding.settingsFab.setOnClickListener { view ->
+            val location = IntArray(2)
+            view.getLocationOnScreen(location)
+            val fabX = location[0] + view.width / 2
+            val fabY = location[1] + view.height / 2
+
+            val dialog = SettingsDialogFragment.newInstance(fabX, fabY)
+            dialog.show(supportFragmentManager, SettingsDialogFragment.TAG)
+        }
     }
 
     private fun setupUndoButton() {
@@ -94,11 +110,47 @@ class MainActivity : AppCompatActivity() {
             itemAnimator = DefaultItemAnimator()
         }
 
-        val itemTouchHelper = ItemTouchHelper(SwipeCallback(photoAdapter))
+        val itemTouchHelper = ItemTouchHelper(SwipeCallback(photoAdapter, viewModel))
         itemTouchHelper.attachToRecyclerView(binding.photoRecyclerView)
 
         val snapHelper = PagerSnapHelper()
         snapHelper.attachToRecyclerView(binding.photoRecyclerView)
+
+        binding.photoRecyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+                super.onScrollStateChanged(recyclerView, newState)
+                if (newState == RecyclerView.SCROLL_STATE_IDLE) {
+                    val layoutManager = recyclerView.layoutManager as LinearLayoutManager
+                    val lastVisibleItemPosition = layoutManager.findLastCompletelyVisibleItemPosition()
+                    val itemCount = recyclerView.adapter?.itemCount ?: 0
+
+                    if (itemCount > 0 && lastVisibleItemPosition == itemCount - 1) {
+                        showEndOfListDialog()
+                    }
+                }
+            }
+        })
+    }
+
+    private fun showEndOfListDialog() {
+        // Prevent showing dialog if one is already visible
+        if (supportFragmentManager.findFragmentByTag("endOfListDialog") != null) {
+            return
+        }
+
+        val builder = androidx.appcompat.app.AlertDialog.Builder(this)
+        builder.setTitle("本组照片回顾完毕")
+        builder.setMessage("要再来一组照片吗")
+        builder.setPositiveButton("再来一组") { dialog, _ ->
+            viewModel.randomizePhotos()
+            binding.photoRecyclerView.scrollToPosition(0)
+            dialog.dismiss()
+        }
+        builder.setNegativeButton("取消") { dialog, _ ->
+            dialog.dismiss()
+        }
+        val dialog = builder.create()
+        dialog.show()
     }
 
     private fun setupDeleteButton() {
@@ -114,8 +166,8 @@ class MainActivity : AppCompatActivity() {
                     photoAdapter.getPhotoUri(position)?.let { uri ->
                         // Mark for deletion (so it can be undone)
                         viewModel.markPhotoForDeletion(uri, position)
-                        // Remove from the UI immediately
-                        photoAdapter.removeAt(position)
+                        // Remove from the ViewModel, which will update the UI
+                        viewModel.removePhotoFromList(uri)
                         // Request the actual deletion from the system
                         viewModel.requestDeleteMarkedPhotos(contentResolver)
                     }
@@ -204,7 +256,13 @@ class PhotoAdapter(
         holder.itemView.setOnClickListener {
             val context = holder.itemView.context
             val intent = PhotoDetailActivity.newIntent(context, photoUri)
-            context.startActivity(intent)
+
+            val options = ActivityOptions.makeSceneTransitionAnimation(
+                context as Activity,
+                holder.imageView,
+                "photo_transition"
+            )
+            context.startActivity(intent, options.toBundle())
         }
     }
 
@@ -245,7 +303,7 @@ class PhotoAdapter(
     }
 }
 
-class SwipeCallback(private val adapter: PhotoAdapter) : ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT) {
+class SwipeCallback(private val adapter: PhotoAdapter, private val viewModel: PhotoViewModel) : ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT) {
 
     override fun onMove(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder): Boolean {
         return false
@@ -258,22 +316,38 @@ class SwipeCallback(private val adapter: PhotoAdapter) : ItemTouchHelper.SimpleC
 
         if (direction == ItemTouchHelper.LEFT) {
             adapter.onDelete(photoUri, position) // Pass position along with Uri
-            adapter.removeAt(position) // Remove from UI
+            viewModel.removePhotoFromList(photoUri)
         } else if (direction == ItemTouchHelper.RIGHT) {
             adapter.onFavorite(photoUri)
-            adapter.removeAt(position)
+            viewModel.removePhotoFromList(photoUri)
         }
     }
 
     override fun onChildDraw(c: Canvas, recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder, dX: Float, dY: Float, actionState: Int, isCurrentlyActive: Boolean) {
         if (actionState == ItemTouchHelper.ACTION_STATE_SWIPE) {
             val holder = viewHolder as PhotoAdapter.PhotoViewHolder
-            val viewWidth = holder.itemView.width.toFloat()
-            val alpha = 1.0f - abs(dX) / viewWidth
+            val itemView = holder.itemView
+            val viewWidth = itemView.width.toFloat()
+            val swipeProgress = (abs(dX) / viewWidth).coerceIn(0f, 1f)
 
-            holder.imageView.alpha = alpha
-            holder.itemView.rotation = dX / viewWidth * 20 // Rotate the whole card
+            // 1. Rotation
+            val rotationAngle = 20f
+            itemView.rotation = (dX / viewWidth) * rotationAngle
 
+            // 2. Scale Down
+            val scaleFactor = 0.2f // Shrink by 20% at full swipe
+            val scale = 1.0f - swipeProgress * scaleFactor
+            itemView.scaleX = scale
+            itemView.scaleY = scale
+
+            // 3. Arc Motion (slight upward movement)
+            val arcFactor = 0.1f // How much it moves up
+            itemView.translationY = -swipeProgress * (itemView.height * arcFactor)
+
+            // 4. Fade out the image view
+            holder.imageView.alpha = 1.0f - swipeProgress
+
+            // Indicator visibility
             if (dX > 0) { // Swiping Right (Favorite)
                 holder.favoriteIndicator.visibility = View.VISIBLE
                 holder.deleteIndicator.visibility = View.GONE
@@ -291,10 +365,15 @@ class SwipeCallback(private val adapter: PhotoAdapter) : ItemTouchHelper.SimpleC
     override fun clearView(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder) {
         super.clearView(recyclerView, viewHolder)
         val holder = viewHolder as PhotoAdapter.PhotoViewHolder
-        // Reset foreground photo view
+        val itemView = holder.itemView
+
+        // Reset all animated properties
+        itemView.rotation = 0f
+        itemView.scaleX = 1.0f
+        itemView.scaleY = 1.0f
+        itemView.translationY = 0f
         holder.imageView.alpha = 1.0f
-        // Reset the whole card rotation
-        holder.itemView.rotation = 0f
+
         // Hide indicators
         holder.deleteIndicator.visibility = View.GONE
         holder.favoriteIndicator.visibility = View.GONE

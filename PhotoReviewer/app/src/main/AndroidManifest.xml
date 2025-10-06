@@ -26,6 +26,8 @@
         <activity
             android:name=".PhotoDetailActivity"
             android:theme="@style/Theme.Material3.DayNight.NoActionBar" />
+
+
     </application>
 
 </manifest>

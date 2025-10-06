@@ -114,6 +114,10 @@ class PhotoViewModel(application: Application) : AndroidViewModel(application) {
         Log.d("PhotoViewModel", "Favorited photo: $uri")
     }
 
+    fun removePhotoFromList(uri: Uri) {
+        _photos.value = _photos.value.filterNot { it == uri }
+    }
+
     fun loadPhotos() {
         if (_photos.value.isNotEmpty()) {
             return

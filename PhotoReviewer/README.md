@@ -1,50 +1,48 @@
-# 回流 (PhotoReviewer)
+# Photo Reviewer (回流)
 
-“回流”是一款简洁的 Android 应用，旨在帮助用户快速回顾和整理手机相册。通过简单的滑动手势，您可以轻松地标记并批量删除不需要的照片，从而释放存储空间。
+Photo Reviewer is a simple Android application designed to help you efficiently review and manage your photos. It presents a random selection of your photos in a focused, one-by-one view, allowing you to make quick decisions to keep, favorite, or delete them. This streamlines the process of cleaning up your device's storage and rediscovering old memories.
 
-## ✨ 功能特性
+The app's Chinese name, "回流" (Huíliú), translates to "Reflow" or "Flow Back," reflecting the idea of letting past photo memories flow back to you for review.
 
-- **手势驱动**: 基于 `ViewPager2` 实现，通过左右滑动轻松切换照片，向上滑动即可将照片标记为待删除，操作直观高效。
-- **批量处理**: 浏览完一组照片后，可以一次性确认删除所有已标记的照片。
-- **安全确认**: 在执行删除操作前，会弹出对话框进行二次确认，防止误删。
-- **权限处理**: 在应用启动时会妥善处理相册读取权限的申请。
-- **现代化 UI**: 使用 Material 3 主题，界面干净整洁，并能自动适配系统的深色和浅色模式。
+## Features
 
-## 📱 工作流程
+- **Randomized Photo Discovery**: Loads a random sample of photos from your gallery each session.
+- **Intuitive Swipe Gestures**:
+    - **Swipe Left** to mark a photo for deletion.
+    - **Swipe Right** to mark a photo as a favorite.
+- **Undo Action**: Instantly undo the last deletion swipe if you make a mistake.
+- **Batch Deletion**: Photos marked for deletion are removed from view and can be permanently deleted in a single batch action.
+    - Uses the Android Recycle Bin (Trash) on supported devices (Android 11+) for safer deletion.
+- **Photo Details**: Tap on a photo to view it in a zoomable detail screen, which displays metadata like:
+    - Image dimensions (width x height)
+    - Date and time taken
+    - Geolocation (city, country), if available in the EXIF data.
+- **Simple UI**: A clean and focused interface for distraction-free photo management.
 
-1.  **授权**: 应用启动后，会请求访问相册的权限。
-2.  **浏览**: 授权后，应用会随机加载一批照片，全屏展示。
-3.  **标记**: 您可以左右滑动切换照片。对于不满意的照片，向上滑动将其“扔掉”，标记为待删除。
-4.  **确认**: 当您浏览完当前批次的所有照片，或者所有照片都已被标记时，应用会显示一个对话框，列出待删除照片的数量。
-5.  **删除或取消**:
-    - 点击“删除”，应用将永久删除这些照片。
-    - 点击“取消”，应用将清空待删除列表并加载新的一批照片。
+## Technology Stack
 
-## 🛠️ 技术栈
+- **Language**: Kotlin
+- **Platform**: Android
+- **UI**: Android SDK with ViewBinding and `RecyclerView`.
+- **Architecture**: Model-View-ViewModel (MVVM)
+- **Asynchronous Operations**: Kotlin Coroutines and Flow for background tasks and UI updates.
+- **Image Loading**: [Coil](https://coil-kt.github.io/coil/) for efficient loading and display of images.
+- **Permissions**: Handles modern Android runtime permissions for media access.
 
-- **语言**: [Kotlin](https://kotlinlang.org/)
-- **UI**: Android View System (XML Layouts)
-- **主要组件**: `ViewPager2`, `ConstraintLayout`, [Material Components](https://material.io/develop/android)
-- **架构模式**: MVVM (Model-View-ViewModel)
-- **异步处理**: [Kotlin Coroutines](https://kotlinlang.org/docs/coroutines-overview.html)
-- **图片加载**: [Coil](https://coil-kt.github.io/coil/)
-- **核心组件**: AndroidX, Lifecycle, ViewModel, ViewBinding
+## How to Build and Run
 
-## 🚀 如何构建
-
-1.  **克隆仓库**:
+1.  **Clone the repository**:
     ```bash
-    git clone <repository-url>
+    git clone https://github.com/your-username/PhotoReviewer.git
     ```
-2.  **打开项目**:
-    使用最新版本的 [Android Studio](https://developer.android.com/studio) 打开项目。
-3.  **构建与运行**:
-    等待 Gradle 同步完成后，直接点击 "Run" 按钮即可在模拟器或真实设备上运行。
+2.  **Open in Android Studio**:
+    - Open Android Studio.
+    - Select "Open an existing project".
+    - Navigate to the cloned repository folder and select it.
+3.  **Sync Gradle**:
+    - Let Android Studio automatically sync the project's dependencies via Gradle.
+4.  **Run the app**:
+    - Select an emulator or connect a physical Android device.
+    - Click the "Run" button (▶️) in Android Studio.
 
-## 📝 权限
-
-为了读取和删除照片，本应用需要以下权限：
-
-- `android.permission.READ_MEDIA_IMAGES` (Android 13+)
-- `android.permission.READ_EXTERNAL_STORAGE` (Android 13 以下)
-- `android.permission.ACCESS_MEDIA_LOCATION` (用于访问照片的地理位置信息)
+The app will build, install, and launch on your selected device. It will request permission to access your photos upon first launch.
