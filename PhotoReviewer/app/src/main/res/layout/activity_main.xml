@@ -62,6 +62,15 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <com.skydoves.transformationlayout.TransformationLayout
+        android:id="@+id/transformationLayout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:transformation_duration="550"
+        app:transformation_targetView="@+id/myCardView">
+
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/settings_fab"
         android:layout_width="wrap_content"
@@ -72,5 +81,24 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         android:contentDescription="Settings" />
+
+    </com.skydoves.transformationlayout.TransformationLayout>
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/myCardView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:cardBackgroundColor="@color/purple_200"
+        >
+
+        <TextView
+            android:id="@+id/deleted_count_text_view"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:textColor="@android:color/white"
+            android:textSize="24sp" />
+
+    </com.google.android.material.card.MaterialCardView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -34,6 +34,8 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
+import com.tencent.mmkv.MMKV
+
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
@@ -77,14 +79,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupSettingsFab() {
-        binding.settingsFab.setOnClickListener { view ->
-            val location = IntArray(2)
-            view.getLocationOnScreen(location)
-            val fabX = location[0] + view.width / 2
-            val fabY = location[1] + view.height / 2
-
-            val dialog = SettingsDialogFragment.newInstance(fabX, fabY)
-            dialog.show(supportFragmentManager, SettingsDialogFragment.TAG)
+        binding.settingsFab.setOnClickListener {
+            val mmkv = MMKV.defaultMMKV()
+            val deletedCount = mmkv.decodeInt("deleted_photo_count", 0)
+            binding.deletedCountTextView.text = "已删除 $deletedCount 照片"
+            binding.transformationLayout.startTransform()
+        }
+        binding.myCardView.setOnClickListener {
+            binding.transformationLayout.finishTransform()
         }
     }
 

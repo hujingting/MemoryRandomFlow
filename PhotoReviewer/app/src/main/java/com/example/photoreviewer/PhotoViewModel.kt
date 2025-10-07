@@ -13,6 +13,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import com.tencent.mmkv.MMKV
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
@@ -22,6 +23,9 @@ sealed class DeletionRequest {
 }
 
 class PhotoViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val mmkv = MMKV.defaultMMKV()
+
 
     private val _photos = MutableStateFlow<List<Uri>>(emptyList())
     val photos = _photos.asStateFlow()
@@ -100,6 +104,10 @@ class PhotoViewModel(application: Application) : AndroidViewModel(application) {
                 val currentPhotos = _photos.value
                 val updatedPhotos = currentPhotos.filterNot { it in deletedUris }
                 _photos.value = updatedPhotos
+
+                val deletedCount = deletedPairs.size
+                val currentDeletedCount = mmkv.decodeInt("deleted_photo_count", 0)
+                mmkv.encode("deleted_photo_count", currentDeletedCount + deletedCount)
 
                 if (updatedPhotos.isEmpty()) {
                     loadPhotos()

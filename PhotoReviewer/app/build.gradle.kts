@@ -62,6 +62,10 @@ dependencies {
     // For reading EXIF data
     implementation("androidx.exifinterface:exifinterface:1.3.7")
 
+    implementation("com.github.skydoves:transformationlayout:1.1.3")
+
+    implementation("com.tencent:mmkv:1.3.0")
+
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
