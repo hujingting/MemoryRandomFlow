@@ -109,6 +109,13 @@ class PhotoViewModel(application: Application) : AndroidViewModel(application) {
                 val currentDeletedCount = mmkv.decodeInt("deleted_photo_count", 0)
                 mmkv.encode("deleted_photo_count", currentDeletedCount + deletedCount)
 
+                var deletedSize = 0L
+                for (pair in deletedPairs) {
+                    deletedSize += getFileSize(pair.first) ?: 0
+                }
+                val currentDeletedSize = mmkv.decodeLong("deleted_photo_size", 0L)
+                mmkv.encode("deleted_photo_size", currentDeletedSize + deletedSize)
+
                 if (updatedPhotos.isEmpty()) {
                     loadPhotos()
                 }
@@ -131,6 +138,14 @@ class PhotoViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
         randomizePhotos()
+    }
+
+    private fun getFileSize(uri: Uri): Long? {
+        return try {
+            getApplication<Application>().contentResolver.openFileDescriptor(uri, "r")?.use { it.statSize }
+        } catch (e: Exception) {
+            null
+        }
     }
 
     fun randomizePhotos() {

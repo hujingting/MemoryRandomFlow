@@ -20,9 +20,18 @@
         android:padding="16dp">
 
         <TextView
+            android:id="@+id/file_size_text_view"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@android:color/white"
+            android:textSize="14sp"
+            tools:text="File Size: 4.5 MB" />
+
+        <TextView
             android:id="@+id/size_text_view"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
             android:textColor="@android:color/white"
             android:textSize="14sp"
             tools:text="Size: 4032 x 3024" />

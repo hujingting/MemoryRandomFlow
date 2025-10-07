@@ -22,6 +22,7 @@ import java.util.Locale
 
 class PhotoDetailActivity : AppCompatActivity() {
 
+    private lateinit var fileSizeTextView: TextView
     private lateinit var sizeTextView: TextView
     private lateinit var dateTextView: TextView
     private lateinit var locationTextView: TextView
@@ -34,6 +35,7 @@ class PhotoDetailActivity : AppCompatActivity() {
 
         val photoUri: Uri? = intent?.data
         val imageView: ZoomableImageView = findViewById(R.id.photo_detail_view)
+        fileSizeTextView = findViewById(R.id.file_size_text_view)
         sizeTextView = findViewById(R.id.size_text_view)
         dateTextView = findViewById(R.id.date_text_view)
         locationTextView = findViewById(R.id.location_text_view)
@@ -54,6 +56,7 @@ class PhotoDetailActivity : AppCompatActivity() {
     private fun loadPhotoMetadata(uri: Uri) {
         lifecycleScope.launch(Dispatchers.IO) {
             val dimensions = getImageDimensions(uri)
+            val fileSize = getFileSize(uri)
             var date: String? = null
             var location: String? = null
 
@@ -68,12 +71,19 @@ class PhotoDetailActivity : AppCompatActivity() {
             }
 
             withContext(Dispatchers.Main) {
-                updateMetadataUI(dimensions, date, location)
+                updateMetadataUI(dimensions, fileSize, date, location)
             }
         }
     }
 
-    private fun updateMetadataUI(dimensions: Pair<Int, Int>?, date: String?, location: String?) {
+    private fun updateMetadataUI(dimensions: Pair<Int, Int>?, fileSize: Long?, date: String?, location: String?) {
+        if (fileSize != null && fileSize > 0) {
+            fileSizeTextView.text = "File Size: ${formatFileSize(fileSize)}"
+            fileSizeTextView.visibility = View.VISIBLE
+        } else {
+            fileSizeTextView.visibility = View.GONE
+        }
+
         if (dimensions != null && dimensions.first > 0 && dimensions.second > 0) {
             sizeTextView.text = "Size: ${dimensions.first} x ${dimensions.second}"
             sizeTextView.visibility = View.VISIBLE
@@ -93,6 +103,25 @@ class PhotoDetailActivity : AppCompatActivity() {
             locationTextView.visibility = View.VISIBLE
         } else {
             locationTextView.visibility = View.GONE
+        }
+    }
+
+    private fun getFileSize(uri: Uri): Long? {
+        return try {
+            contentResolver.openFileDescriptor(uri, "r")?.use { it.statSize }
+        } catch (e: IOException) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    private fun formatFileSize(size: Long): String {
+        val kb = size / 1024
+        val mb = kb / 1024
+        return when {
+            mb > 0 -> "$mb MB"
+            kb > 0 -> "$kb KB"
+            else -> "$size Bytes"
         }
     }
 

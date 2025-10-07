@@ -83,10 +83,24 @@ class MainActivity : AppCompatActivity() {
             val mmkv = MMKV.defaultMMKV()
             val deletedCount = mmkv.decodeInt("deleted_photo_count", 0)
             binding.deletedCountTextView.text = "已删除 $deletedCount 照片"
+
+            val deletedSize = mmkv.decodeLong("deleted_photo_size", 0L)
+            binding.deletedSizeTextView.text = "总共释放 ${formatFileSize(deletedSize)} 空间"
+
             binding.transformationLayout.startTransform()
         }
         binding.myCardView.setOnClickListener {
             binding.transformationLayout.finishTransform()
+        }
+    }
+
+    private fun formatFileSize(size: Long): String {
+        val kb = size / 1024
+        val mb = kb / 1024
+        return when {
+            mb > 0 -> "$mb MB"
+            kb > 0 -> "$kb KB"
+            else -> "$size Bytes"
         }
     }
 
