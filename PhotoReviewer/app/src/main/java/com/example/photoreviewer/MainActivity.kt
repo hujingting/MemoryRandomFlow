@@ -34,6 +34,9 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
+import android.content.Context
+import android.os.Vibrator
+
 import com.tencent.mmkv.MMKV
 
 class MainActivity : AppCompatActivity() {
@@ -331,6 +334,8 @@ class SwipeCallback(private val adapter: PhotoAdapter, private val viewModel: Ph
         val photoUri = adapter.getPhotoUri(position) ?: return
 
         if (direction == ItemTouchHelper.LEFT) {
+            val vibrator = viewHolder.itemView.context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+            vibrator.vibrate(50)
             adapter.onDelete(photoUri, position) // Pass position along with Uri
             viewModel.removePhotoFromList(photoUri)
         } else if (direction == ItemTouchHelper.RIGHT) {
