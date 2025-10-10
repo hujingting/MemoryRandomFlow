@@ -58,6 +58,7 @@ dependencies {
 
     // Coil for image loading (base library)
     implementation("io.coil-kt:coil:2.6.0")
+    implementation("io.coil-kt:coil-gif:2.6.0")
 
     // For reading EXIF data
     implementation("androidx.exifinterface:exifinterface:1.3.7")

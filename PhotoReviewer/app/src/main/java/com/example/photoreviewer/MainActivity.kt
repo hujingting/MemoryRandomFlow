@@ -79,6 +79,19 @@ class MainActivity : AppCompatActivity() {
         setupRandomizeButton()
         setupUndoButton()
         setupSettingsFab()
+        setupFilterChips()
+    }
+
+    private fun setupFilterChips() {
+        binding.chipGroupFilter.setOnCheckedStateChangeListener { group, checkedIds ->
+            if (checkedIds.isNotEmpty()) {
+                when (checkedIds[0]) {
+                    R.id.chip_all -> viewModel.setPhotoType(PhotoType.ALL)
+                    R.id.chip_images -> viewModel.setPhotoType(PhotoType.IMAGES)
+                    R.id.chip_gifs -> viewModel.setPhotoType(PhotoType.GIFS)
+                }
+            }
+        }
     }
 
     private fun setupSettingsFab() {

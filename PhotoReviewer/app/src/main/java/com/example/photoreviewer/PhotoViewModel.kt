@@ -22,9 +22,16 @@ sealed class DeletionRequest {
     data class RequiresPendingIntent(val intent: PendingIntent) : DeletionRequest()
 }
 
+enum class PhotoType {
+    ALL, IMAGES, GIFS
+}
+
 class PhotoViewModel(application: Application) : AndroidViewModel(application) {
 
     private val mmkv = MMKV.defaultMMKV()
+
+    private val _photoType = MutableStateFlow(PhotoType.ALL)
+    val photoType = _photoType.asStateFlow()
 
 
     private val _photos = MutableStateFlow<List<Uri>>(emptyList())
@@ -133,11 +140,16 @@ class PhotoViewModel(application: Application) : AndroidViewModel(application) {
         _photos.value = _photos.value.filterNot { it == uri }
     }
 
+    fun setPhotoType(photoType: PhotoType) {
+        _photoType.value = photoType
+        randomizePhotos(photoType)
+    }
+
     fun loadPhotos() {
         if (_photos.value.isNotEmpty()) {
             return
         }
-        randomizePhotos()
+        randomizePhotos(_photoType.value)
     }
 
     private fun getFileSize(uri: Uri): Long? {
@@ -148,19 +160,34 @@ class PhotoViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun randomizePhotos() {
+    fun randomizePhotos(photoType: PhotoType = _photoType.value) {
+        Log.d("PhotoViewModel", "randomizePhotos with type: $photoType")
         viewModelScope.launch {
             val photoUris = mutableListOf<Uri>()
             val contentResolver = getApplication<Application>().contentResolver
 
-            val projection = arrayOf(MediaStore.Images.Media._ID)
+            val projection = arrayOf(MediaStore.Images.Media._ID, MediaStore.Images.Media.MIME_TYPE)
             val sortOrder = "${MediaStore.Images.Media.DATE_TAKEN} DESC"
+
+            val selection = when (photoType) {
+                PhotoType.IMAGES -> "${MediaStore.Images.Media.MIME_TYPE} = ? OR ${MediaStore.Images.Media.MIME_TYPE} = ?"
+                PhotoType.GIFS -> "${MediaStore.Images.Media.MIME_TYPE} = ?"
+                PhotoType.ALL -> null
+            }
+
+            val selectionArgs = when (photoType) {
+                PhotoType.IMAGES -> arrayOf("image/jpeg", "image/png")
+                PhotoType.GIFS -> arrayOf("image/gif")
+                PhotoType.ALL -> null
+            }
+
+            Log.d("PhotoViewModel", "Selection: $selection, Args: ${selectionArgs?.joinToString()}")
 
             contentResolver.query(
                 MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
                 projection,
-                null,
-                null,
+                selection,
+                selectionArgs,
                 sortOrder
             )?.use { cursor ->
                 val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
@@ -173,6 +200,7 @@ class PhotoViewModel(application: Application) : AndroidViewModel(application) {
                     photoUris.add(contentUri)
                 }
             }
+            Log.d("PhotoViewModel", "Found ${photoUris.size} photos")
             _photos.value = photoUris.shuffled().take(16) // Keep the change to 16 photos
         }
     }
