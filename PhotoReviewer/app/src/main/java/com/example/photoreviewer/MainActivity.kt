@@ -232,11 +232,6 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
 
-                launch {
-                    viewModel.canUndo.collect { canUndo ->
-                        binding.undoButton.visibility = if (canUndo) View.VISIBLE else View.GONE
-                    }
-                }
 
                 launch {
                     viewModel.deletionRequest.collectLatest { request ->
