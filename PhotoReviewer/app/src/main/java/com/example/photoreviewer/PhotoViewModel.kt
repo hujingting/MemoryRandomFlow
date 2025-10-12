@@ -23,7 +23,7 @@ sealed class DeletionRequest {
 }
 
 enum class PhotoType {
-    ALL, IMAGES, GIFS
+    ALL, IMAGES, GIFS, VIDEOS
 }
 
 class PhotoViewModel(application: Application) : AndroidViewModel(application) {
@@ -166,38 +166,57 @@ class PhotoViewModel(application: Application) : AndroidViewModel(application) {
             val photoUris = mutableListOf<Uri>()
             val contentResolver = getApplication<Application>().contentResolver
 
-            val projection = arrayOf(MediaStore.Images.Media._ID, MediaStore.Images.Media.MIME_TYPE)
-            val sortOrder = "${MediaStore.Images.Media.DATE_TAKEN} DESC"
+            val projection = when (photoType) {
+                PhotoType.VIDEOS -> arrayOf(MediaStore.Video.Media._ID, MediaStore.Video.Media.MIME_TYPE)
+                else -> arrayOf(MediaStore.Images.Media._ID, MediaStore.Images.Media.MIME_TYPE)
+            }
+            val sortOrder = when (photoType) {
+                PhotoType.VIDEOS -> "${MediaStore.Video.Media.DATE_TAKEN} DESC"
+                else -> "${MediaStore.Images.Media.DATE_TAKEN} DESC"
+            }
 
             val selection = when (photoType) {
                 PhotoType.IMAGES -> "${MediaStore.Images.Media.MIME_TYPE} = ? OR ${MediaStore.Images.Media.MIME_TYPE} = ?"
                 PhotoType.GIFS -> "${MediaStore.Images.Media.MIME_TYPE} = ?"
+                PhotoType.VIDEOS -> "${MediaStore.Video.Media.MIME_TYPE} LIKE ?"
                 PhotoType.ALL -> null
             }
 
             val selectionArgs = when (photoType) {
                 PhotoType.IMAGES -> arrayOf("image/jpeg", "image/png")
                 PhotoType.GIFS -> arrayOf("image/gif")
+                PhotoType.VIDEOS -> arrayOf("video/%")
                 PhotoType.ALL -> null
+            }
+
+            val queryUri = when (photoType) {
+                PhotoType.VIDEOS -> MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+                else -> MediaStore.Images.Media.EXTERNAL_CONTENT_URI
             }
 
             Log.d("PhotoViewModel", "Selection: $selection, Args: ${selectionArgs?.joinToString()}")
 
             contentResolver.query(
-                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                queryUri,
                 projection,
                 selection,
                 selectionArgs,
                 sortOrder
             )?.use { cursor ->
-                val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
+                val idColumn = when (photoType) {
+                    PhotoType.VIDEOS -> cursor.getColumnIndexOrThrow(MediaStore.Video.Media._ID)
+                    else -> cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
+                }
                 while (cursor.moveToNext()) {
                     val id = cursor.getLong(idColumn)
                     val contentUri = ContentUris.withAppendedId(
-                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                        queryUri,
                         id
                     )
                     photoUris.add(contentUri)
+                    if (photoType == PhotoType.VIDEOS) {
+                        Log.d("PhotoViewModel", "Found video: $contentUri")
+                    }
                 }
             }
             Log.d("PhotoViewModel", "Found ${photoUris.size} photos")

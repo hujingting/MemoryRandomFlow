@@ -37,6 +37,10 @@ import kotlin.math.abs
 import android.content.Context
 import android.os.Vibrator
 
+import androidx.media3.ui.PlayerView
+import androidx.media3.common.MediaItem
+import androidx.media3.exoplayer.ExoPlayer
+
 import com.tencent.mmkv.MMKV
 
 class MainActivity : AppCompatActivity() {
@@ -46,12 +50,13 @@ class MainActivity : AppCompatActivity() {
     private lateinit var photoAdapter: PhotoAdapter
 
     private val permissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val allGranted = permissions.entries.all { it.value }
+        if (allGranted) {
             viewModel.loadPhotos()
         } else {
-            binding.infoText.text = "需要读取照片的权限"
+            binding.infoText.text = "需要读取照片和视频的权限"
             binding.infoText.visibility = View.VISIBLE
         }
     }
@@ -89,6 +94,7 @@ class MainActivity : AppCompatActivity() {
                     R.id.chip_all -> viewModel.setPhotoType(PhotoType.ALL)
                     R.id.chip_images -> viewModel.setPhotoType(PhotoType.IMAGES)
                     R.id.chip_gifs -> viewModel.setPhotoType(PhotoType.GIFS)
+                    R.id.chip_videos -> viewModel.setPhotoType(PhotoType.VIDEOS)
                 }
             }
         }
@@ -128,6 +134,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupRecyclerView() {
         photoAdapter = PhotoAdapter(
+            contentResolver,
             onDelete = {
                 uri, position -> viewModel.markPhotoForDeletion(uri, position)
             },
@@ -149,10 +156,21 @@ class MainActivity : AppCompatActivity() {
         snapHelper.attachToRecyclerView(binding.photoRecyclerView)
 
         binding.photoRecyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            private var currentlyPlayingHolder: PhotoAdapter.VideoViewHolder? = null
+
             override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
                 super.onScrollStateChanged(recyclerView, newState)
                 if (newState == RecyclerView.SCROLL_STATE_IDLE) {
                     val layoutManager = recyclerView.layoutManager as LinearLayoutManager
+                    val position = layoutManager.findFirstCompletelyVisibleItemPosition()
+                    if (position != RecyclerView.NO_POSITION) {
+                        val holder = recyclerView.findViewHolderForAdapterPosition(position)
+                        if (holder is PhotoAdapter.VideoViewHolder) {
+                            currentlyPlayingHolder?.playerView?.player?.pause()
+                            holder.playerView.player?.play()
+                            currentlyPlayingHolder = holder
+                        }
+                    }
                     val lastVisibleItemPosition = layoutManager.findLastCompletelyVisibleItemPosition()
                     val itemCount = recyclerView.adapter?.itemCount ?: 0
 
@@ -248,48 +266,78 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun requestPermission() {
-        val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            Manifest.permission.READ_MEDIA_IMAGES
+        val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            arrayOf(Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO)
         } else {
-            Manifest.permission.READ_EXTERNAL_STORAGE
+            arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
         }
 
-        when {
-            ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED -> {
-                viewModel.loadPhotos()
-            }
-            else -> {
-                permissionLauncher.launch(permission)
-            }
+        val allGranted = permissions.all { ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED }
+
+        if (allGranted) {
+            viewModel.loadPhotos()
+        } else {
+            permissionLauncher.launch(permissions)
         }
     }
 }
 
 class PhotoAdapter(
+    private val contentResolver: android.content.ContentResolver,
     val onDelete: (Uri, Int) -> Unit,
     val onFavorite: (Uri) -> Unit
-) : RecyclerView.Adapter<PhotoAdapter.PhotoViewHolder>() {
+) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     private val photos = mutableListOf<Uri>()
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PhotoViewHolder {
-        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_photo, parent, false)
-        return PhotoViewHolder(view)
+    companion object {
+        private const val VIEW_TYPE_PHOTO = 0
+        private const val VIEW_TYPE_VIDEO = 1
     }
 
-    override fun onBindViewHolder(holder: PhotoViewHolder, position: Int) {
+    override fun getItemViewType(position: Int): Int {
+        val uri = photos[position]
+        val type = contentResolver.getType(uri)
+        return if (type?.startsWith("video") == true) {
+            VIEW_TYPE_VIDEO
+        } else {
+            VIEW_TYPE_PHOTO
+        }
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_photo, parent, false)
+        return if (viewType == VIEW_TYPE_VIDEO) {
+            VideoViewHolder(view)
+        } else {
+            PhotoViewHolder(view)
+        }
+    }
+
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         val photoUri = photos[position]
-        holder.bind(photoUri)
+        when (holder) {
+            is PhotoViewHolder -> holder.bind(photoUri)
+            is VideoViewHolder -> holder.bind(photoUri)
+        }
         holder.itemView.setOnClickListener {
             val context = holder.itemView.context
             val intent = PhotoDetailActivity.newIntent(context, photoUri)
 
             val options = ActivityOptions.makeSceneTransitionAnimation(
                 context as Activity,
-                holder.imageView,
+                if (holder is PhotoViewHolder) holder.imageView else holder.itemView.findViewById(R.id.player_view),
                 "photo_transition"
             )
             context.startActivity(intent, options.toBundle())
+        }
+    }
+
+    override fun onViewRecycled(holder: RecyclerView.ViewHolder) {
+        super.onViewRecycled(holder)
+        if (holder is VideoViewHolder) {
+            holder.playerView.player?.release()
+            holder.playerView.player = null
         }
     }
 
@@ -317,20 +365,44 @@ class PhotoAdapter(
         }
     }
 
-    class PhotoViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+    inner class PhotoViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val imageView: ImageView = itemView.findViewById(R.id.photo_image_view)
         val deleteIndicator: View = itemView.findViewById(R.id.delete_indicator_layout)
         val favoriteIndicator: View = itemView.findViewById(R.id.favorite_indicator_layout)
 
         fun bind(uri: Uri) {
+            imageView.visibility = View.VISIBLE
+            (itemView.findViewById(R.id.player_view) as PlayerView).visibility = View.GONE
             imageView.load(uri)
             deleteIndicator.visibility = View.GONE
             favoriteIndicator.visibility = View.GONE
         }
     }
+
+    inner class VideoViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        val playerView: PlayerView = itemView.findViewById(R.id.player_view)
+
+        fun bind(uri: Uri) {
+            (itemView.findViewById(R.id.photo_image_view) as ImageView).visibility = View.GONE
+            playerView.visibility = View.VISIBLE
+            val player = ExoPlayer.Builder(itemView.context).build()
+            playerView.player = player
+            val mediaItem = MediaItem.fromUri(uri)
+            player.setMediaItem(mediaItem)
+            player.prepare()
+        }
+    }
 }
 
 class SwipeCallback(private val adapter: PhotoAdapter, private val viewModel: PhotoViewModel) : ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT) {
+
+    override fun getMovementFlags(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder): Int {
+        return if (viewHolder is PhotoAdapter.VideoViewHolder) {
+            makeMovementFlags(0, 0)
+        } else {
+            makeMovementFlags(0, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT)
+        }
+    }
 
     override fun onMove(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder): Boolean {
         return false
@@ -354,38 +426,40 @@ class SwipeCallback(private val adapter: PhotoAdapter, private val viewModel: Ph
 
     override fun onChildDraw(c: Canvas, recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder, dX: Float, dY: Float, actionState: Int, isCurrentlyActive: Boolean) {
         if (actionState == ItemTouchHelper.ACTION_STATE_SWIPE) {
-            val holder = viewHolder as PhotoAdapter.PhotoViewHolder
-            val itemView = holder.itemView
-            val viewWidth = itemView.width.toFloat()
-            val swipeProgress = (abs(dX) / viewWidth).coerceIn(0f, 1f)
+            if (viewHolder is PhotoAdapter.PhotoViewHolder) {
+                val holder = viewHolder
+                val itemView = holder.itemView
+                val viewWidth = itemView.width.toFloat()
+                val swipeProgress = (abs(dX) / viewWidth).coerceIn(0f, 1f)
 
-            // 1. Rotation
-            val rotationAngle = 20f
-            itemView.rotation = (dX / viewWidth) * rotationAngle
+                // 1. Rotation
+                val rotationAngle = 20f
+                itemView.rotation = (dX / viewWidth) * rotationAngle
 
-            // 2. Scale Down
-            val scaleFactor = 0.2f // Shrink by 20% at full swipe
-            val scale = 1.0f - swipeProgress * scaleFactor
-            itemView.scaleX = scale
-            itemView.scaleY = scale
+                // 2. Scale Down
+                val scaleFactor = 0.2f // Shrink by 20% at full swipe
+                val scale = 1.0f - swipeProgress * scaleFactor
+                itemView.scaleX = scale
+                itemView.scaleY = scale
 
-            // 3. Arc Motion (slight upward movement)
-            val arcFactor = 0.1f // How much it moves up
-            itemView.translationY = -swipeProgress * (itemView.height * arcFactor)
+                // 3. Arc Motion (slight upward movement)
+                val arcFactor = 0.1f // How much it moves up
+                itemView.translationY = -swipeProgress * (itemView.height * arcFactor)
 
-            // 4. Fade out the image view
-            holder.imageView.alpha = 1.0f - swipeProgress
+                // 4. Fade out the image view
+                holder.imageView.alpha = 1.0f - swipeProgress
 
-            // Indicator visibility
-            if (dX > 0) { // Swiping Right (Favorite)
-                holder.favoriteIndicator.visibility = View.VISIBLE
-                holder.deleteIndicator.visibility = View.GONE
-            } else if (dX < 0) { // Swiping Left (Delete)
-                holder.deleteIndicator.visibility = View.VISIBLE
-                holder.favoriteIndicator.visibility = View.GONE
-            } else {
-                holder.deleteIndicator.visibility = View.GONE
-                holder.favoriteIndicator.visibility = View.GONE
+                // Indicator visibility
+                if (dX > 0) { // Swiping Right (Favorite)
+                    holder.favoriteIndicator.visibility = View.VISIBLE
+                    holder.deleteIndicator.visibility = View.GONE
+                } else if (dX < 0) { // Swiping Left (Delete)
+                    holder.deleteIndicator.visibility = View.VISIBLE
+                    holder.favoriteIndicator.visibility = View.GONE
+                } else {
+                    holder.deleteIndicator.visibility = View.GONE
+                    holder.favoriteIndicator.visibility = View.GONE
+                }
             }
         }
         super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive)
