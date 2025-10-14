@@ -49,6 +49,10 @@ class PhotoViewModel(application: Application) : AndroidViewModel(application) {
         _settingsInfo.value = SettingsInfo(deletedCount, deletedSize)
     }
 
+    fun onSettingsShown() {
+        _settingsInfo.value = null
+    }
+
     fun markPhotoForDeletion(uri: Uri, position: Int) {
         _photosToDelete.value = _photosToDelete.value + Pair(uri, position)
         _canUndo.value = true

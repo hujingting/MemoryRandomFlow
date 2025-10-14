@@ -10,6 +10,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -59,10 +62,20 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        setupEdgeToEdge()
         setupRecyclerView()
         observeViewModel()
         requestPermission()
         setupClickListeners()
+    }
+
+    private fun setupEdgeToEdge() {
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        ViewCompat.setOnApplyWindowInsetsListener(binding.chipGroupFilter) { view, windowInsets ->
+            val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.setPadding(view.paddingLeft, insets.top, view.paddingRight, view.paddingBottom)
+            WindowInsetsCompat.CONSUMED
+        }
     }
 
     private fun setupClickListeners() {
@@ -186,6 +199,7 @@ class MainActivity : AppCompatActivity() {
                             binding.deletedCountTextView.text = "已删除 ${it.deletedCount} 照片"
                             binding.deletedSizeTextView.text = "总共释放 ${formatFileSize(it.deletedSize)} 空间"
                             binding.transformationLayout.startTransform()
+                            viewModel.onSettingsShown()
                         }
                     }
                 }
