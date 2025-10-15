@@ -28,15 +28,16 @@ class SwipeCallback(private val adapter: PhotoAdapter, private val viewModel: Ph
         if (position == RecyclerView.NO_POSITION) return
         val photoUri = adapter.getPhotoUri(position) ?: return
 
-        if (direction == ItemTouchHelper.LEFT) {
+        if (direction == ItemTouchHelper.LEFT || direction == ItemTouchHelper.RIGHT) {
             val vibrator = viewHolder.itemView.context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
             vibrator.vibrate(50)
             adapter.onDelete(photoUri, position) // Pass position along with Uri
             viewModel.removePhotoFromList(photoUri)
-        } else if (direction == ItemTouchHelper.RIGHT) {
-            adapter.onFavorite(photoUri)
-            viewModel.removePhotoFromList(photoUri)
         }
+//        else if (direction == ItemTouchHelper.RIGHT) {
+//            adapter.onFavorite(photoUri)
+//            viewModel.removePhotoFromList(photoUri)
+//        }
     }
 
     override fun onChildDraw(c: Canvas, recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder, dX: Float, dY: Float, actionState: Int, isCurrentlyActive: Boolean) {
@@ -65,13 +66,16 @@ class SwipeCallback(private val adapter: PhotoAdapter, private val viewModel: Ph
                 holder.imageView.alpha = 1.0f - swipeProgress
 
                 // Indicator visibility
-                if (dX > 0) { // Swiping Right (Favorite)
-                    holder.favoriteIndicator.visibility = View.VISIBLE
-                    holder.deleteIndicator.visibility = View.GONE
-                } else if (dX < 0) { // Swiping Left (Delete)
-                    holder.deleteIndicator.visibility = View.VISIBLE
+                if (dX > 0 || dX < 0) { // Swiping Right (Favorite)
                     holder.favoriteIndicator.visibility = View.GONE
-                } else {
+                    holder.deleteIndicator.visibility = View.VISIBLE
+                }
+//                else if (dX < 0) { // Swiping Left (Delete)
+//                    holder.deleteIndicator.visibility = View.VISIBLE
+//                    holder.favoriteIndicator.visibility = View.GONE
+//                }
+
+                else {
                     holder.deleteIndicator.visibility = View.GONE
                     holder.favoriteIndicator.visibility = View.GONE
                 }
