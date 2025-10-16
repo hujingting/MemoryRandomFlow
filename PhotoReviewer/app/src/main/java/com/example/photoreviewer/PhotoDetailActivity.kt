@@ -48,9 +48,23 @@ class PhotoDetailActivity : AppCompatActivity() {
                 )
             }
             loadPhotoMetadata(photoUri)
+
+            findViewById<View>(R.id.share_button).setOnClickListener {
+                sharePhoto(photoUri)
+            }
         } else {
             finish()
         }
+    }
+
+    private fun sharePhoto(uri: Uri) {
+        val shareIntent: Intent = Intent().apply {
+            action = Intent.ACTION_SEND
+            putExtra(Intent.EXTRA_STREAM, uri)
+            type = contentResolver.getType(uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        startActivity(Intent.createChooser(shareIntent, "Share Photo"))
     }
 
     private fun loadPhotoMetadata(uri: Uri) {

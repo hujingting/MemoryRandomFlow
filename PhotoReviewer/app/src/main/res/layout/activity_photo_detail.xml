@@ -3,7 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/black">
+    android:background="@android:color/black"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <com.example.photoreviewer.ZoomableImageView
         android:id="@+id/photo_detail_view"
@@ -54,5 +55,15 @@
             android:textSize="14sp"
             tools:text="Location: San Francisco, CA" />
     </LinearLayout>
+
+    <ImageButton
+        android:id="@+id/share_button"
+        android:layout_width="45dp"
+        android:layout_height="45dp"
+        android:layout_margin="16dp"
+        android:background="@drawable/share_button_background"
+        android:src="@android:drawable/ic_menu_share"
+        android:layout_gravity="end"
+        app:tint="@android:color/white" />
 
 </FrameLayout>
