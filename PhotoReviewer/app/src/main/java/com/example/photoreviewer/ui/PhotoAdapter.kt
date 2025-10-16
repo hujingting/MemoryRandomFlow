@@ -13,7 +13,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import androidx.recyclerview.widget.RecyclerView
 import coil.load
-import com.example.photoreviewer.PhotoDetailActivity
+import com.example.photoreviewer.ui.PhotoDetailActivity
 import com.example.photoreviewer.R
 
 class PhotoAdapter(

@@ -1,4 +1,4 @@
-package com.example.photoreviewer
+package com.example.photoreviewer.ui
 
 import android.content.Context
 import android.content.Intent
@@ -7,12 +7,14 @@ import android.location.Geocoder
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
-import android.widget.TextView
 import android.view.Window
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.exifinterface.media.ExifInterface
 import androidx.lifecycle.lifecycleScope
 import coil.load
+import com.example.photoreviewer.R
+import com.example.photoreviewer.ui.ZoomableImageView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext

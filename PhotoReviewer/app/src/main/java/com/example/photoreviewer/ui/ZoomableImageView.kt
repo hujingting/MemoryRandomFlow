@@ -1,4 +1,4 @@
-package com.example.photoreviewer
+package com.example.photoreviewer.ui
 
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter

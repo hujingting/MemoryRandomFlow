@@ -6,7 +6,7 @@
     android:background="@android:color/black"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
-    <com.example.photoreviewer.ZoomableImageView
+    <com.example.photoreviewer.ui.ZoomableImageView
         android:id="@+id/photo_detail_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
