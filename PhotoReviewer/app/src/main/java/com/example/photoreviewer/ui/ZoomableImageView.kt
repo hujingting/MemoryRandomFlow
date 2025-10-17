@@ -11,6 +11,7 @@ import android.util.AttributeSet
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
+import android.widget.OverScroller
 import androidx.appcompat.widget.AppCompatImageView
 import kotlin.math.min
 
@@ -23,6 +24,7 @@ class ZoomableImageView @JvmOverloads constructor(
     private val matrix_ = Matrix()
     private val scaleGestureDetector: ScaleGestureDetector
     private val gestureDetector: GestureDetector
+    private val scroller: OverScroller
 
     // Reusable RectF instances to avoid allocations during gestures
     private val drawableRect = RectF()
@@ -39,6 +41,7 @@ class ZoomableImageView @JvmOverloads constructor(
 
     init {
         scaleType = ScaleType.MATRIX
+        scroller = OverScroller(context)
         scaleGestureDetector = ScaleGestureDetector(context, ScaleListener())
         gestureDetector = GestureDetector(context, GestureListener())
         imageMatrix = matrix_
@@ -53,13 +56,39 @@ class ZoomableImageView @JvmOverloads constructor(
         if (zoomAnimator?.isRunning == true) {
             return true
         }
+        if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+            scroller.forceFinished(true)
+        }
         scaleGestureDetector.onTouchEvent(event)
         gestureDetector.onTouchEvent(event)
         return true
     }
 
+    override fun computeScroll() {
+        super.computeScroll()
+        if (scroller.computeScrollOffset()) {
+            val matrixValues = FloatArray(9)
+            matrix_.getValues(matrixValues)
+            val currentTransX = matrixValues[Matrix.MTRANS_X]
+            val currentTransY = matrixValues[Matrix.MTRANS_Y]
+
+            val newTransX = scroller.currX.toFloat()
+            val newTransY = scroller.currY.toFloat()
+
+            val dx = newTransX - currentTransX
+            val dy = newTransY - currentTransY
+
+            matrix_.postTranslate(dx, dy)
+            imageMatrix = matrix_
+            postInvalidateOnAnimation()
+        }
+    }
+
     private inner class ScaleListener : ScaleGestureDetector.SimpleOnScaleGestureListener() {
         override fun onScale(detector: ScaleGestureDetector): Boolean {
+            if (detector.currentSpan == 0f) {
+                return true
+            }
             val newScale = currentScale * detector.scaleFactor
             if (newScale < MIN_SCALE) {
                 resetMatrix()
@@ -83,12 +112,68 @@ class ZoomableImageView @JvmOverloads constructor(
         }
 
         override fun onScroll(e1: MotionEvent?, e2: MotionEvent, distanceX: Float, distanceY: Float): Boolean {
+            if (scaleGestureDetector.isInProgress) {
+                return false
+            }
             if (currentScale > MIN_SCALE) {
                 matrix_.postTranslate(-distanceX, -distanceY)
                 checkAndApplyMatrix()
             }
             return true
         }
+
+        override fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
+            if (currentScale > MIN_SCALE) {
+                fling((velocityX / 1.5f).toInt(), (velocityY / 1.5f).toInt())
+            }
+            return true
+        }
+    }
+
+    private fun fling(velocityX: Int, velocityY: Int) {
+        if (drawable == null) return
+
+        val matrixValues = FloatArray(9)
+        matrix_.getValues(matrixValues)
+
+        val scale = matrixValues[Matrix.MSCALE_X]
+        val transX = matrixValues[Matrix.MTRANS_X]
+        val transY = matrixValues[Matrix.MTRANS_Y]
+
+        val contentWidth = drawable.intrinsicWidth * scale
+        val contentHeight = drawable.intrinsicHeight * scale
+
+        val viewWidth = width.toFloat()
+        val viewHeight = height.toFloat()
+
+        val minX: Int
+        val maxX: Int
+        if (contentWidth > viewWidth) {
+            minX = (viewWidth - contentWidth).toInt()
+            maxX = 0
+        } else {
+            minX = transX.toInt()
+            maxX = transX.toInt()
+        }
+
+        val minY: Int
+        val maxY: Int
+        if (contentHeight > viewHeight) {
+            minY = (viewHeight - contentHeight).toInt()
+            maxY = 0
+        } else {
+            minY = transY.toInt()
+            maxY = transY.toInt()
+        }
+
+        scroller.fling(
+            transX.toInt(), transY.toInt(),
+            velocityX, velocityY,
+            minX, maxX,
+            minY, maxY,
+            0, 0
+        )
+        postInvalidateOnAnimation()
     }
 
     private fun animateZoomTo(targetScale: Float, focusX: Float, focusY: Float) {
@@ -129,23 +214,39 @@ class ZoomableImageView @JvmOverloads constructor(
     private fun checkAndApplyMatrix() {
         if (drawable == null) return
 
-        drawableRect.set(0f, 0f, drawable.intrinsicWidth.toFloat(), drawable.intrinsicHeight.toFloat())
-        matrix_.mapRect(drawableRect)
+        val matrixValues = FloatArray(9)
+        matrix_.getValues(matrixValues)
 
-        val deltaX = getBoundDelta(viewRect.width(), drawableRect.width(), viewRect.centerX(), drawableRect.centerX(), drawableRect.left, viewRect.left, drawableRect.right, viewRect.right)
-        val deltaY = getBoundDelta(viewRect.height(), drawableRect.height(), viewRect.centerY(), drawableRect.centerY(), drawableRect.top, viewRect.top, drawableRect.bottom, viewRect.bottom)
+        val scale = matrixValues[Matrix.MSCALE_X]
+        val transX = matrixValues[Matrix.MTRANS_X]
+        val transY = matrixValues[Matrix.MTRANS_Y]
+
+        val contentWidth = drawable.intrinsicWidth * scale
+        val contentHeight = drawable.intrinsicHeight * scale
+
+        val viewWidth = width.toFloat()
+        val viewHeight = height.toFloat()
+
+        var deltaX = 0f
+        if (contentWidth <= viewWidth) {
+            deltaX = viewWidth / 2f - (transX + contentWidth / 2f)
+        } else if (transX > 0) {
+            deltaX = -transX
+        } else if (transX + contentWidth < viewWidth) {
+            deltaX = viewWidth - (transX + contentWidth)
+        }
+
+        var deltaY = 0f
+        if (contentHeight <= viewHeight) {
+            deltaY = viewHeight / 2f - (transY + contentHeight / 2f)
+        } else if (transY > 0) {
+            deltaY = -transY
+        } else if (transY + contentHeight < viewHeight) {
+            deltaY = viewHeight - (transY + contentHeight)
+        }
 
         matrix_.postTranslate(deltaX, deltaY)
         imageMatrix = matrix_
-    }
-
-    private fun getBoundDelta(viewSize: Float, contentSize: Float, viewCenter: Float, contentCenter: Float, contentLeft: Float, viewLeft: Float, contentRight: Float, viewRight: Float): Float {
-        return when {
-            contentSize < viewSize -> viewCenter - contentCenter
-            contentLeft > viewLeft -> viewLeft - contentLeft
-            contentRight < viewRight -> viewRight - contentRight
-            else -> 0f
-        }
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {

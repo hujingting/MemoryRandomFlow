@@ -3,6 +3,7 @@ package com.example.photoreviewer.ui
 import android.Manifest
 import android.app.Activity
 import android.content.pm.PackageManager
+import kotlin.math.abs
 import android.os.Build
 import android.os.Bundle
 import android.view.View
@@ -130,6 +131,26 @@ class MainActivity : AppCompatActivity() {
 
         binding.photoRecyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             private var currentlyPlayingHolder: PhotoAdapter.VideoViewHolder? = null
+
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                super.onScrolled(recyclerView, dx, dy)
+                for (i in 0 until recyclerView.childCount) {
+                    val child = recyclerView.getChildAt(i)
+                    val childCenterY = (child.top + child.bottom) / 2f
+                    val parentCenterY = recyclerView.height / 2f
+                    val dY = childCenterY - parentCenterY
+
+                    val factor = dY / (recyclerView.height / 2f)
+
+                    val scale = 1 - 0.15f * kotlin.math.abs(factor)
+                    child.scaleX = scale
+                    child.scaleY = scale
+
+//                    child.rotation = 10 * factor
+
+                    child.alpha = 1 - 0.5f * kotlin.math.abs(factor)
+                }
+            }
 
             override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
                 super.onScrollStateChanged(recyclerView, newState)
