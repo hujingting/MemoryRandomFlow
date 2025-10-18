@@ -1,22 +1,29 @@
 package com.example.photoreviewer.ui
 
 import android.Manifest
+import android.animation.ValueAnimator
 import android.app.Activity
 import android.content.pm.PackageManager
+import android.graphics.ImageDecoder
+import android.graphics.drawable.ColorDrawable
 import kotlin.math.abs
 import android.os.Build
 import android.os.Bundle
+import android.provider.MediaStore
+import android.util.Log
 import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.ColorUtils
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.palette.graphics.Palette
 import androidx.recyclerview.widget.DefaultItemAnimator
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -27,8 +34,10 @@ import com.example.photoreviewer.R
 import com.example.photoreviewer.databinding.ActivityMainBinding
 import com.example.photoreviewer.viewmodel.PhotoViewModel
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainActivity : AppCompatActivity() {
 
@@ -166,6 +175,37 @@ class MainActivity : AppCompatActivity() {
                         } else {
                             currentlyPlayingHolder?.playerView?.player?.pause()
                             currentlyPlayingHolder = null
+                        }
+                        photoAdapter.getPhotoUri(position)?.let { uri ->
+                            val type = contentResolver.getType(uri)
+                            if (type?.startsWith("image/") == true) {
+                                lifecycleScope.launch(Dispatchers.IO) {
+                                    val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                                        val source = ImageDecoder.createSource(contentResolver, uri)
+                                        ImageDecoder.decodeBitmap(source) { decoder, _, _ ->
+                                            decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+                                        }
+                                    } else {
+                                        MediaStore.Images.Media.getBitmap(contentResolver, uri)
+                                    }
+                                    val palette = Palette.from(bitmap).generate()
+                                    palette.dominantSwatch?.rgb?.let { color ->
+                                        withContext(Dispatchers.Main) {
+                                            val oldColor = (binding.root.background as? ColorDrawable)?.color ?: android.graphics.Color.TRANSPARENT
+                                            val newColor = ColorUtils.setAlphaComponent(color, 204)
+
+                                            val colorAnimation = ValueAnimator.ofArgb(oldColor, newColor)
+                                            colorAnimation.duration = 300 // milliseconds
+                                            colorAnimation.addUpdateListener { animator ->
+                                                val animatedColor = animator.animatedValue as Int
+                                                binding.root.setBackgroundColor(animatedColor)
+                                                window.statusBarColor = animatedColor
+                                            }
+                                            colorAnimation.start()
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                     if (layoutManager.findLastCompletelyVisibleItemPosition() == photoAdapter.itemCount - 1) {

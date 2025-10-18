@@ -5,11 +5,11 @@
     android:layout_height="match_parent">
 
     <!-- Foreground Photo -->
+<!--    android:background="?android:colorBackground"-->
     <ImageView
         android:id="@+id/photo_image_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="?android:colorBackground"
         android:scaleType="fitCenter"
         android:transitionName="photo_transition" />
 
