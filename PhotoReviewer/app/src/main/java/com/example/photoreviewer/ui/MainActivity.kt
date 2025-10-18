@@ -6,6 +6,7 @@ import android.app.Activity
 import android.content.pm.PackageManager
 import android.graphics.ImageDecoder
 import android.graphics.drawable.ColorDrawable
+import android.net.Uri
 import kotlin.math.abs
 import android.os.Build
 import android.os.Bundle
@@ -177,35 +178,7 @@ class MainActivity : AppCompatActivity() {
                             currentlyPlayingHolder = null
                         }
                         photoAdapter.getPhotoUri(position)?.let { uri ->
-                            val type = contentResolver.getType(uri)
-                            if (type?.startsWith("image/") == true) {
-                                lifecycleScope.launch(Dispatchers.IO) {
-                                    val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                                        val source = ImageDecoder.createSource(contentResolver, uri)
-                                        ImageDecoder.decodeBitmap(source) { decoder, _, _ ->
-                                            decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
-                                        }
-                                    } else {
-                                        MediaStore.Images.Media.getBitmap(contentResolver, uri)
-                                    }
-                                    val palette = Palette.from(bitmap).generate()
-                                    palette.dominantSwatch?.rgb?.let { color ->
-                                        withContext(Dispatchers.Main) {
-                                            val oldColor = (binding.root.background as? ColorDrawable)?.color ?: android.graphics.Color.TRANSPARENT
-                                            val newColor = ColorUtils.setAlphaComponent(color, 204)
-
-                                            val colorAnimation = ValueAnimator.ofArgb(oldColor, newColor)
-                                            colorAnimation.duration = 300 // milliseconds
-                                            colorAnimation.addUpdateListener { animator ->
-                                                val animatedColor = animator.animatedValue as Int
-                                                binding.root.setBackgroundColor(animatedColor)
-                                                window.statusBarColor = animatedColor
-                                            }
-                                            colorAnimation.start()
-                                        }
-                                    }
-                                }
-                            }
+                            updateBackgroundColor(uri)
                         }
                     }
                     if (layoutManager.findLastCompletelyVisibleItemPosition() == photoAdapter.itemCount - 1) {
@@ -214,6 +187,38 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         })
+    }
+
+    private fun updateBackgroundColor(uri: Uri) {
+        val type = contentResolver.getType(uri)
+        if (type?.startsWith("image/") == true) {
+            lifecycleScope.launch(Dispatchers.IO) {
+                val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    val source = ImageDecoder.createSource(contentResolver, uri)
+                    ImageDecoder.decodeBitmap(source) { decoder, _, _ ->
+                        decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+                    }
+                } else {
+                    MediaStore.Images.Media.getBitmap(contentResolver, uri)
+                }
+                val palette = Palette.from(bitmap).generate()
+                palette.dominantSwatch?.rgb?.let { color ->
+                    withContext(Dispatchers.Main) {
+                        val oldColor = (binding.root.background as? ColorDrawable)?.color ?: android.graphics.Color.TRANSPARENT
+                        val newColor = ColorUtils.setAlphaComponent(color, 204)
+
+                        val colorAnimation = ValueAnimator.ofArgb(oldColor, newColor)
+                        colorAnimation.duration = 300 // milliseconds
+                        colorAnimation.addUpdateListener { animator ->
+                            val animatedColor = animator.animatedValue as Int
+                            binding.root.setBackgroundColor(animatedColor)
+                            window.statusBarColor = animatedColor
+                        }
+                        colorAnimation.start()
+                    }
+                }
+            }
+        }
     }
 
     private fun showEndOfListDialog() {
@@ -238,6 +243,9 @@ class MainActivity : AppCompatActivity() {
                     viewModel.photos.collect { photos ->
                         binding.infoText.visibility = if (photos.isEmpty()) View.VISIBLE else View.GONE
                         photoAdapter.submitList(photos)
+                        if (photos.isNotEmpty()) {
+                            updateBackgroundColor(photos[0])
+                        }
                     }
                 }
                 launch {
