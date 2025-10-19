@@ -71,6 +71,8 @@ dependencies {
     implementation("androidx.media3:media3-ui:1.3.1")
 
     implementation("androidx.palette:palette-ktx:1.0.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
 
 
     testImplementation("junit:junit:4.13.2")
