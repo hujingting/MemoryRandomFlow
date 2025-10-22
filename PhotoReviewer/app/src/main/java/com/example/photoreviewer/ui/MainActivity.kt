@@ -7,11 +7,9 @@ import android.content.pm.PackageManager
 import android.graphics.ImageDecoder
 import android.graphics.drawable.ColorDrawable
 import android.net.Uri
-import kotlin.math.abs
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
-import android.util.Log
 import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
@@ -90,7 +88,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupClickListeners() {
-        binding.deleteButton.setOnClickListener { 
+        binding.deleteButton.setOnClickListener {
             if (viewModel.photosToDelete.value.isNotEmpty()) {
                 viewModel.requestDeleteMarkedPhotos(contentResolver)
             } else {
@@ -103,7 +101,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
-        binding.randomizeButton.setOnClickListener { 
+        binding.randomizeButton.setOnClickListener {
             viewModel.randomizePhotos()
             binding.photoRecyclerView.scrollToPosition(0)
         }
@@ -132,11 +130,17 @@ class MainActivity : AppCompatActivity() {
 
         binding.photoRecyclerView.apply {
             adapter = photoAdapter
-            layoutManager = LinearLayoutManager(this@MainActivity, LinearLayoutManager.VERTICAL, false)
+            layoutManager =
+                LinearLayoutManager(this@MainActivity, LinearLayoutManager.VERTICAL, false)
             itemAnimator = DefaultItemAnimator()
         }
 
-        ItemTouchHelper(SwipeCallback(photoAdapter, viewModel)).attachToRecyclerView(binding.photoRecyclerView)
+        ItemTouchHelper(
+            SwipeCallback(
+                photoAdapter,
+                viewModel
+            )
+        ).attachToRecyclerView(binding.photoRecyclerView)
         PagerSnapHelper().attachToRecyclerView(binding.photoRecyclerView)
 
         binding.photoRecyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
@@ -181,6 +185,7 @@ class MainActivity : AppCompatActivity() {
                             updateBackgroundColor(uri)
                         }
                     }
+
                     if (layoutManager.findLastCompletelyVisibleItemPosition() == photoAdapter.itemCount - 1) {
                         showEndOfListDialog()
                     }
@@ -189,33 +194,37 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
+
+    private suspend fun bitmapPalette(uri: Uri): Palette = withContext(Dispatchers.IO) {
+        val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            val source = ImageDecoder.createSource(contentResolver, uri)
+            ImageDecoder.decodeBitmap(source) { decoder, _, _ ->
+                decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+            }
+        } else {
+            MediaStore.Images.Media.getBitmap(contentResolver, uri)
+        }
+        return@withContext Palette.from(bitmap).generate()
+    }
+
     private fun updateBackgroundColor(uri: Uri) {
         val type = contentResolver.getType(uri)
         if (type?.startsWith("image/") == true) {
-            lifecycleScope.launch(Dispatchers.IO) {
-                val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                    val source = ImageDecoder.createSource(contentResolver, uri)
-                    ImageDecoder.decodeBitmap(source) { decoder, _, _ ->
-                        decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
-                    }
-                } else {
-                    MediaStore.Images.Media.getBitmap(contentResolver, uri)
-                }
-                val palette = Palette.from(bitmap).generate()
+            lifecycleScope.launch(Dispatchers.Main) {
+                val palette = bitmapPalette(uri)
                 palette.dominantSwatch?.rgb?.let { color ->
-                    withContext(Dispatchers.Main) {
-                        val oldColor = (binding.root.background as? ColorDrawable)?.color ?: android.graphics.Color.TRANSPARENT
-                        val newColor = ColorUtils.setAlphaComponent(color, 204)
+                    val oldColor = (binding.root.background as? ColorDrawable)?.color
+                        ?: android.graphics.Color.TRANSPARENT
+                    val newColor = ColorUtils.setAlphaComponent(color, 204)
 
-                        val colorAnimation = ValueAnimator.ofArgb(oldColor, newColor)
-                        colorAnimation.duration = 300 // milliseconds
-                        colorAnimation.addUpdateListener { animator ->
-                            val animatedColor = animator.animatedValue as Int
-                            binding.root.setBackgroundColor(animatedColor)
-                            window.statusBarColor = animatedColor
-                        }
-                        colorAnimation.start()
+                    val colorAnimation = ValueAnimator.ofArgb(oldColor, newColor)
+                    colorAnimation.duration = 300 // milliseconds
+                    colorAnimation.addUpdateListener { animator ->
+                        val animatedColor = animator.animatedValue as Int
+                        binding.root.setBackgroundColor(animatedColor)
+                        window.statusBarColor = animatedColor
                     }
+                    colorAnimation.start()
                 }
             }
         }
@@ -241,7 +250,8 @@ class MainActivity : AppCompatActivity() {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
                     viewModel.photos.collect { photos ->
-                        binding.infoText.visibility = if (photos.isEmpty()) View.VISIBLE else View.GONE
+                        binding.infoText.visibility =
+                            if (photos.isEmpty()) View.VISIBLE else View.GONE
                         photoAdapter.submitList(photos)
                         if (photos.isNotEmpty()) {
                             updateBackgroundColor(photos[0])
@@ -257,16 +267,19 @@ class MainActivity : AppCompatActivity() {
                 launch {
                     viewModel.deletionRequest.collectLatest { request ->
                         if (request is com.example.photoreviewer.viewmodel.DeletionRequest.RequiresPendingIntent) {
-                        val intentSenderRequest = androidx.activity.result.IntentSenderRequest.Builder(request.intent).build()
-                        deleteRequestLauncher.launch(intentSenderRequest)
-                    }
+                            val intentSenderRequest =
+                                androidx.activity.result.IntentSenderRequest.Builder(request.intent)
+                                    .build()
+                            deleteRequestLauncher.launch(intentSenderRequest)
+                        }
                     }
                 }
                 launch {
                     viewModel.settingsInfo.collectLatest { settingsInfo ->
                         settingsInfo?.let {
                             binding.deletedCountTextView.text = "已删除 ${it.deletedCount} 照片"
-                            binding.deletedSizeTextView.text = "总共释放 ${formatFileSize(it.deletedSize)} 空间"
+                            binding.deletedSizeTextView.text =
+                                "总共释放 ${formatFileSize(it.deletedSize)} 空间"
                             binding.transformationLayout.startTransform()
                             viewModel.onSettingsShown()
                         }
@@ -293,7 +306,12 @@ class MainActivity : AppCompatActivity() {
             arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
         }
 
-        if (permissions.all { ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED }) {
+        if (permissions.all {
+                ContextCompat.checkSelfPermission(
+                    this,
+                    it
+                ) == PackageManager.PERMISSION_GRANTED
+            }) {
             viewModel.loadPhotos()
         } else {
             permissionLauncher.launch(permissions)
