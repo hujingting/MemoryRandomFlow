@@ -32,6 +32,7 @@ class PhotoDetailActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         window.requestFeature(Window.FEATURE_CONTENT_TRANSITIONS)
         super.onCreate(savedInstanceState)
+        window.statusBarColor = resources.getColor(android.R.color.black, theme)
         setContentView(R.layout.activity_photo_detail)
         postponeEnterTransition()
 
