@@ -43,6 +43,8 @@ class PhotoViewModel(application: Application) : AndroidViewModel(application) {
     private val _settingsInfo = MutableStateFlow<SettingsInfo?>(null)
     val settingsInfo = _settingsInfo.asStateFlow()
 
+    private val randomPhotosNum = 32
+
     fun showSettings() {
         val deletedCount = repository.getDeletedPhotoCount()
         val deletedSize = repository.getDeletedPhotoSize()
@@ -151,7 +153,7 @@ class PhotoViewModel(application: Application) : AndroidViewModel(application) {
     fun randomizePhotos(photoType: PhotoType = _photoType.value) {
         viewModelScope.launch {
             val photoUris = repository.getPhotos(photoType)
-            _photos.value = photoUris.shuffled().take(16)
+            _photos.value = photoUris.shuffled().take(randomPhotosNum)
         }
     }
 }
