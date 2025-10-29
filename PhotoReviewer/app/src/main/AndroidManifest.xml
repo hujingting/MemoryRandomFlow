@@ -29,6 +29,9 @@
             android:name=".ui.PhotoDetailActivity"
             android:theme="@style/Theme.Material3.DayNight.NoActionBar" />
 
+        <activity android:name="com.example.photoreviewer.cardstack.CardStackActivity"
+            android:theme="@style/Theme.Material3.DayNight.NoActionBar" />
+
     </application>
 
 </manifest>

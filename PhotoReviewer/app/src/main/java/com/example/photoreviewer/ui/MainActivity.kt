@@ -38,6 +38,10 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+import android.content.Intent
+
+import com.example.photoreviewer.cardstack.CardStackActivity
+
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
@@ -105,6 +109,12 @@ class MainActivity : AppCompatActivity() {
             viewModel.randomizePhotos()
             binding.photoRecyclerView.scrollToPosition(0)
         }
+
+        binding.cardStackButton.setOnClickListener {
+            val intent = Intent(this, CardStackActivity::class.java)
+            startActivity(intent)
+        }
+
         binding.undoButton.setOnClickListener { viewModel.undoLastDeletion() }
         binding.settingsFab.setOnClickListener { viewModel.showSettings() }
         binding.myCardView.setOnClickListener { binding.transformationLayout.finishTransform() }
