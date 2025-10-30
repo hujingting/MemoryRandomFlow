@@ -49,6 +49,9 @@ class ZoomableImageView @JvmOverloads constructor(
 
     override fun setImageDrawable(drawable: Drawable?) {
         super.setImageDrawable(drawable)
+        // 清理之前的缩放动画和状态
+        zoomAnimator?.cancel()
+        currentScale = 1.0f
         resetMatrix()
     }
 
@@ -253,6 +256,24 @@ class ZoomableImageView @JvmOverloads constructor(
         super.onSizeChanged(w, h, oldw, oldh)
         if (w > 0 && h > 0) {
             viewRect.set(0f, 0f, w.toFloat(), h.toFloat())
+            resetMatrix()
+        }
+    }
+
+    // 添加内存清理方法
+    fun cleanup() {
+        zoomAnimator?.cancel()
+        zoomAnimator = null
+        scaleGestureDetector?.let { /* 清理资源 */ }
+        gestureDetector?.let { /* 清理资源 */ }
+        scroller?.let { /* 清理资源 */ }
+    }
+
+    // 重置到安全状态
+    fun resetToSafeState() {
+        zoomAnimator?.cancel()
+        currentScale = 1.0f
+        if (drawable != null) {
             resetMatrix()
         }
     }

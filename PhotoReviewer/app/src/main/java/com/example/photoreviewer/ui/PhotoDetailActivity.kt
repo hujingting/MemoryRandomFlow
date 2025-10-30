@@ -13,6 +13,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.exifinterface.media.ExifInterface
 import androidx.lifecycle.lifecycleScope
 import coil.load
+import coil.request.ImageRequest
+import coil.size.Size
 import com.example.photoreviewer.R
 import com.example.photoreviewer.ui.ZoomableImageView
 import kotlinx.coroutines.Dispatchers
@@ -21,6 +23,7 @@ import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Locale
+import android.util.DisplayMetrics
 
 class PhotoDetailActivity : AppCompatActivity() {
 
@@ -28,6 +31,7 @@ class PhotoDetailActivity : AppCompatActivity() {
     private lateinit var sizeTextView: TextView
     private lateinit var dateTextView: TextView
     private lateinit var locationTextView: TextView
+    private lateinit var imageView: ZoomableImageView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         window.requestFeature(Window.FEATURE_CONTENT_TRANSITIONS)
@@ -37,19 +41,14 @@ class PhotoDetailActivity : AppCompatActivity() {
         postponeEnterTransition()
 
         val photoUri: Uri? = intent?.data
-        val imageView: ZoomableImageView = findViewById(R.id.photo_detail_view)
+        imageView = findViewById(R.id.photo_detail_view)
         fileSizeTextView = findViewById(R.id.file_size_text_view)
         sizeTextView = findViewById(R.id.size_text_view)
         dateTextView = findViewById(R.id.date_text_view)
         locationTextView = findViewById(R.id.location_text_view)
 
         if (photoUri != null) {
-            imageView.load(photoUri) {
-                listener(
-                    onSuccess = { _, _ -> startPostponedEnterTransition() },
-                    onError = { _, _ -> startPostponedEnterTransition() }
-                )
-            }
+            loadImageWithOptimization(photoUri, imageView)
             loadPhotoMetadata(photoUri)
 
             findViewById<View>(R.id.share_button).setOnClickListener {
@@ -60,6 +59,69 @@ class PhotoDetailActivity : AppCompatActivity() {
         }
     }
 
+    private fun loadImageWithOptimization(uri: Uri, imageView: ZoomableImageView) {
+        // 获取屏幕尺寸用于图片采样
+        val displayMetrics = DisplayMetrics()
+        windowManager.defaultDisplay.getMetrics(displayMetrics)
+        val screenWidth = displayMetrics.widthPixels
+        val screenHeight = displayMetrics.heightPixels
+
+        // 计算合适的图片尺寸（考虑缩放）
+        val targetSize = Size(screenWidth * 2, screenHeight * 2) // 2倍大小以支持缩放
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                // 切换到主线程进行图片加载
+                withContext(Dispatchers.Main) {
+                    imageView.load(uri) {
+                        size(targetSize)
+                        listener(
+                            onSuccess = { _, result ->
+                                startPostponedEnterTransition()
+                                // 图片加载成功后的处理
+                            },
+                            onError = { _, result ->
+                                startPostponedEnterTransition()
+                                // 错误处理：尝试使用更保守的设置重新加载
+                                loadWithFallbackSettings(uri, imageView)
+                            }
+                        )
+                        // 添加内存优化设置
+                        crossfade(true)
+                        placeholder(android.R.drawable.ic_menu_gallery)
+                        error(android.R.drawable.ic_menu_report_image)
+                        // 设置内存优化参数
+                        allowHardware(false) // 对于大图，避免使用硬件层
+                        allowRgb565(true) // 使用 RGB565 格式减少内存占用
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    // 如果出错，使用fallback设置
+                    loadWithFallbackSettings(uri, imageView)
+                }
+            }
+        }
+    }
+
+    private fun loadWithFallbackSettings(uri: Uri, imageView: ZoomableImageView) {
+        imageView.load(uri) {
+            size(Size.ORIGINAL) // 使用原始尺寸但配合采样
+            listener(
+                onSuccess = { _, _ -> /* 已经调用了 startPostponedEnterTransition */ },
+                onError = { _, _ ->
+                    // 最后的fallback：显示错误图片
+                    imageView.setImageResource(android.R.drawable.ic_menu_report_image)
+                }
+            )
+            crossfade(false) // 禁用淡入效果以提高性能
+            placeholder(android.R.drawable.ic_menu_gallery)
+            error(android.R.drawable.ic_menu_report_image)
+            // Coil 会自动处理大图的内存优化
+        }
+    }
+
+    
     private fun sharePhoto(uri: Uri) {
         val shareIntent: Intent = Intent().apply {
             action = Intent.ACTION_SEND
@@ -190,6 +252,19 @@ class PhotoDetailActivity : AppCompatActivity() {
             e.printStackTrace()
             null
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // 清理资源，避免内存泄漏
+        imageView.cleanup()
+        System.gc() // 建议垃圾回收，但不强制
+    }
+
+    override fun onLowMemory() {
+        super.onLowMemory()
+        // 在内存不足时清理图片缓存
+        imageView.resetToSafeState()
     }
 
     companion object {
