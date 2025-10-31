@@ -20,58 +20,28 @@ class PhotoAdapter(
     private val contentResolver: ContentResolver,
     val onDelete: (Uri, Int) -> Unit,
     val onFavorite: (Uri) -> Unit
-) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+) : RecyclerView.Adapter<PhotoAdapter.PhotoViewHolder>() {
 
     private val photos = mutableListOf<Uri>()
 
-    companion object {
-        private const val VIEW_TYPE_PHOTO = 0
-        private const val VIEW_TYPE_VIDEO = 1
-    }
-
-    override fun getItemViewType(position: Int): Int {
-        val uri = photos[position]
-        val type = contentResolver.getType(uri)
-        return if (type?.startsWith("video") == true) {
-            VIEW_TYPE_VIDEO
-        } else {
-            VIEW_TYPE_PHOTO
-        }
-    }
-
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PhotoViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.item_photo, parent, false)
-        return if (viewType == VIEW_TYPE_VIDEO) {
-            VideoViewHolder(view)
-        } else {
-            PhotoViewHolder(view)
-        }
+        return PhotoViewHolder(view)
     }
 
-    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+    override fun onBindViewHolder(holder: PhotoViewHolder, position: Int) {
         val photoUri = photos[position]
-        when (holder) {
-            is PhotoViewHolder -> holder.bind(photoUri)
-            is VideoViewHolder -> holder.bind(photoUri)
-        }
+        holder.bind(photoUri)
         holder.itemView.setOnClickListener {
             val context = holder.itemView.context
             val intent = PhotoDetailActivity.newIntent(context, photoUri)
 
             val options = ActivityOptions.makeSceneTransitionAnimation(
                 context as Activity,
-                if (holder is PhotoViewHolder) holder.imageView else holder.itemView.findViewById(R.id.player_view),
+                holder.imageView,
                 "photo_transition"
             )
             context.startActivity(intent, options.toBundle())
-        }
-    }
-
-    override fun onViewRecycled(holder: RecyclerView.ViewHolder) {
-        super.onViewRecycled(holder)
-        if (holder is VideoViewHolder) {
-            holder.playerView.player?.release()
-            holder.playerView.player = null
         }
     }
 
@@ -110,20 +80,6 @@ class PhotoAdapter(
             imageView.load(uri)
             deleteIndicator.visibility = View.GONE
             favoriteIndicator.visibility = View.GONE
-        }
-    }
-
-    inner class VideoViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        val playerView: PlayerView = itemView.findViewById(R.id.player_view)
-
-        fun bind(uri: Uri) {
-            (itemView.findViewById(R.id.photo_image_view) as ImageView).visibility = View.GONE
-            playerView.visibility = View.VISIBLE
-            val player = ExoPlayer.Builder(itemView.context).build()
-            playerView.player = player
-            val mediaItem = MediaItem.fromUri(uri)
-            player.setMediaItem(mediaItem)
-            player.prepare()
         }
     }
 }

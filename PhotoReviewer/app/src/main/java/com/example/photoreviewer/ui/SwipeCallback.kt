@@ -12,11 +12,7 @@ import kotlin.math.abs
 class SwipeCallback(private val adapter: PhotoAdapter, private val viewModel: PhotoViewModel) : ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT) {
 
     override fun getMovementFlags(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder): Int {
-        return if (viewHolder is PhotoAdapter.VideoViewHolder) {
-            makeMovementFlags(0, 0)
-        } else {
-            makeMovementFlags(0, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT)
-        }
+        return makeMovementFlags(0, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT)
     }
 
     override fun onMove(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder): Boolean {

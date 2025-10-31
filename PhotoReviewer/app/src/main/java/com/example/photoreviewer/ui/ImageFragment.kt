@@ -130,7 +130,6 @@ class ImageFragment : Fragment() {
                 val type = when (checkedIds[0]) {
                     R.id.chip_images -> PhotoType.IMAGES
                     R.id.chip_gifs -> PhotoType.GIFS
-                    R.id.chip_videos -> PhotoType.VIDEOS
                     else -> PhotoType.ALL
                 }
                 viewModel.setPhotoType(type)
@@ -161,7 +160,6 @@ class ImageFragment : Fragment() {
         PagerSnapHelper().attachToRecyclerView(binding.photoRecyclerView)
 
         binding.photoRecyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
-            private var currentlyPlayingHolder: PhotoAdapter.VideoViewHolder? = null
 
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 super.onScrolled(recyclerView, dx, dy)
@@ -173,15 +171,6 @@ class ImageFragment : Fragment() {
                     val layoutManager = recyclerView.layoutManager as LinearLayoutManager
                     val position = layoutManager.findFirstCompletelyVisibleItemPosition()
                     if (position != RecyclerView.NO_POSITION) {
-                        val holder = recyclerView.findViewHolderForAdapterPosition(position)
-                        if (holder is PhotoAdapter.VideoViewHolder) {
-                            currentlyPlayingHolder?.playerView?.player?.pause()
-                            holder.playerView.player?.play()
-                            currentlyPlayingHolder = holder
-                        } else {
-                            currentlyPlayingHolder?.playerView?.player?.pause()
-                            currentlyPlayingHolder = null
-                        }
                         photoAdapter.getPhotoUri(position)?.let { uri ->
                             updateBackgroundColor(uri)
                         }

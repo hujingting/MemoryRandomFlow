@@ -37,12 +37,6 @@
             android:layout_height="wrap_content"
             android:text="GIF" />
 
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chip_videos"
-            style="@style/Widget.MaterialComponents.Chip.Filter"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="视频" />
 
     </com.google.android.material.chip.ChipGroup>
 
