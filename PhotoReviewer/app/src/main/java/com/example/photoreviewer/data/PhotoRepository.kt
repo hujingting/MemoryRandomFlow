@@ -38,6 +38,16 @@ class PhotoRepository(private val application: Application) {
         }
     }
 
+    suspend fun deleteVideo(videoUri: Uri): Boolean {
+        return try {
+            val rowsDeleted = application.contentResolver.delete(videoUri, null, null)
+            rowsDeleted > 0
+        } catch (e: Exception) {
+            Log.e("PhotoRepository", "Error deleting video: $videoUri", e)
+            false
+        }
+    }
+
     fun getPhotos(photoType: PhotoType): List<Uri> {
         val photoUris = mutableListOf<Uri>()
         val contentResolver = application.contentResolver

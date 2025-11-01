@@ -16,10 +16,21 @@ class VideoViewModel(application: Application) : AndroidViewModel(application) {
     private val _videos = MutableStateFlow<List<Uri>>(emptyList())
     val videos = _videos.asStateFlow()
 
+    fun deleteVideo(videoUri: Uri) {
+        viewModelScope.launch {
+            val isDeleted = repository.deleteVideo(videoUri)
+            if (isDeleted) {
+                val currentList = _videos.value
+                _videos.value = currentList.filter { it != videoUri }
+            }
+        }
+    }
+
     fun loadVideos() {
         viewModelScope.launch {
-            val videoUris = repository.getPhotos(PhotoType.VIDEOS)
-            _videos.value = videoUris
+            val allVideoUris = repository.getPhotos(PhotoType.VIDEOS)
+            val randomVideos = allVideoUris.shuffled().take(20)
+            _videos.value = randomVideos
         }
     }
 }
