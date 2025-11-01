@@ -1,5 +1,6 @@
 package com.example.photoreviewer.ui
 
+import VideoFragment
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment

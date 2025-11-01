@@ -1,5 +1,4 @@
-package com.example.photoreviewer.ui
-
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -9,10 +8,9 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.PagerSnapHelper
-import androidx.recyclerview.widget.RecyclerView
+import androidx.viewpager2.widget.ViewPager2
 import com.example.photoreviewer.databinding.FragmentVideoBinding
+import com.example.photoreviewer.ui.VideoPagerAdapter
 import com.example.photoreviewer.viewmodel.VideoViewModel
 import kotlinx.coroutines.launch
 
@@ -22,7 +20,7 @@ class VideoFragment : Fragment() {
     private val binding get() = _binding!!
 
     private val viewModel: VideoViewModel by viewModels()
-    private lateinit var videoAdapter: VideoAdapter
+    private lateinit var videoAdapter: VideoPagerAdapter
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -36,42 +34,41 @@ class VideoFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        setupRecyclerView()
+        setupViewPager()
+        setupButtons()
         observeViewModel()
         viewModel.loadVideos()
     }
 
-    private fun setupRecyclerView() {
-        videoAdapter = VideoAdapter()
-        binding.videoRecyclerView.apply {
+    private fun setupViewPager() {
+        videoAdapter = VideoPagerAdapter(this)
+        binding.videoViewPager.apply {
             adapter = videoAdapter
-            layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.VERTICAL, false)
+            orientation = ViewPager2.ORIENTATION_VERTICAL
+        }
+    }
+
+    private fun setupButtons() {
+        binding.btnRandom.setOnClickListener { 
+            viewModel.loadVideos()
         }
 
-        PagerSnapHelper().attachToRecyclerView(binding.videoRecyclerView)
-
-        binding.videoRecyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
-            private var currentlyPlayingHolder: VideoAdapter.VideoViewHolder? = null
-
-            override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
-                super.onScrollStateChanged(recyclerView, newState)
-                if (newState == RecyclerView.SCROLL_STATE_IDLE) {
-                    val layoutManager = recyclerView.layoutManager as LinearLayoutManager
-                    val position = layoutManager.findFirstCompletelyVisibleItemPosition()
-                    if (position != RecyclerView.NO_POSITION) {
-                        val holder = recyclerView.findViewHolderForAdapterPosition(position)
-                        if (holder is VideoAdapter.VideoViewHolder) {
-                            currentlyPlayingHolder?.playerView?.player?.pause()
-                            holder.playerView.player?.play()
-                            currentlyPlayingHolder = holder
-                        } else {
-                            currentlyPlayingHolder?.playerView?.player?.pause()
-                            currentlyPlayingHolder = null
-                        }
-                    }
-                }
+        binding.btnShare.setOnClickListener { 
+            val currentPosition = binding.videoViewPager.currentItem
+            val currentVideoUri = videoAdapter.videoUris[currentPosition]
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "video/*"
+                putExtra(Intent.EXTRA_STREAM, currentVideoUri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
-        })
+            startActivity(Intent.createChooser(shareIntent, "分享视频"))
+        }
+
+        binding.btnDelete.setOnClickListener {
+           val currentPosition = binding.videoViewPager.currentItem
+           val currentVideoUri = videoAdapter.videoUris[currentPosition]
+           viewModel.deleteVideo(currentVideoUri)
+        }
     }
 
     private fun observeViewModel() {
