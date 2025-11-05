@@ -5,6 +5,7 @@ import com.tencent.mmkv.MMKV
 
 import coil.ImageLoader
 import coil.ImageLoaderFactory
+import com.example.photoreviewer.utils.Coil
 
 class MyApplication : Application(), ImageLoaderFactory {
     override fun onCreate() {

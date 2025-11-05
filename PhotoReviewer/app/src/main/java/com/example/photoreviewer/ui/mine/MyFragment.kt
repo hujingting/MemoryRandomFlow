@@ -1,4 +1,4 @@
-package com.example.photoreviewer.ui
+package com.example.photoreviewer.ui.mine
 
 import android.os.Bundle
 import android.view.LayoutInflater

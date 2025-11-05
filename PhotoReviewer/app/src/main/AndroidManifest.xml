@@ -26,10 +26,10 @@
         </activity>
 
         <activity
-            android:name=".ui.PhotoDetailActivity"
+            android:name=".ui.image.PhotoDetailActivity"
             android:theme="@style/Theme.Material3.DayNight.NoActionBar" />
 
-        <activity android:name="com.example.photoreviewer.cardstack.CardStackActivity"
+        <activity android:name="com.example.photoreviewer.ui.cardstack.CardStackActivity"
             android:theme="@style/Theme.Material3.DayNight.NoActionBar" />
 
     </application>

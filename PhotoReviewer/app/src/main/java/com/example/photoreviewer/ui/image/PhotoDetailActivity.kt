@@ -1,11 +1,13 @@
-package com.example.photoreviewer.ui
+package com.example.photoreviewer.ui.image
 
+import android.R
 import android.content.Context
 import android.content.Intent
 import android.graphics.BitmapFactory
 import android.location.Geocoder
 import android.net.Uri
 import android.os.Bundle
+import android.util.DisplayMetrics
 import android.view.View
 import android.view.Window
 import android.widget.TextView
@@ -13,17 +15,14 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.exifinterface.media.ExifInterface
 import androidx.lifecycle.lifecycleScope
 import coil.load
-import coil.request.ImageRequest
 import coil.size.Size
-import com.example.photoreviewer.R
-import com.example.photoreviewer.ui.ZoomableImageView
+import com.example.photoreviewer.ui.image.ZoomableImageView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Locale
-import android.util.DisplayMetrics
 
 class PhotoDetailActivity : AppCompatActivity() {
 
@@ -36,22 +35,22 @@ class PhotoDetailActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         window.requestFeature(Window.FEATURE_CONTENT_TRANSITIONS)
         super.onCreate(savedInstanceState)
-        window.statusBarColor = resources.getColor(android.R.color.black, theme)
-        setContentView(R.layout.activity_photo_detail)
+        window.statusBarColor = resources.getColor(R.color.black, theme)
+        setContentView(com.example.photoreviewer.R.layout.activity_photo_detail)
         postponeEnterTransition()
 
         val photoUri: Uri? = intent?.data
-        imageView = findViewById(R.id.photo_detail_view)
-        fileSizeTextView = findViewById(R.id.file_size_text_view)
-        sizeTextView = findViewById(R.id.size_text_view)
-        dateTextView = findViewById(R.id.date_text_view)
-        locationTextView = findViewById(R.id.location_text_view)
+        imageView = findViewById(com.example.photoreviewer.R.id.photo_detail_view)
+        fileSizeTextView = findViewById(com.example.photoreviewer.R.id.file_size_text_view)
+        sizeTextView = findViewById(com.example.photoreviewer.R.id.size_text_view)
+        dateTextView = findViewById(com.example.photoreviewer.R.id.date_text_view)
+        locationTextView = findViewById(com.example.photoreviewer.R.id.location_text_view)
 
         if (photoUri != null) {
             loadImageWithOptimization(photoUri, imageView)
             loadPhotoMetadata(photoUri)
 
-            findViewById<View>(R.id.share_button).setOnClickListener {
+            findViewById<View>(com.example.photoreviewer.R.id.share_button).setOnClickListener {
                 sharePhoto(photoUri)
             }
         } else {
@@ -88,8 +87,8 @@ class PhotoDetailActivity : AppCompatActivity() {
                         )
                         // 添加内存优化设置
                         crossfade(true)
-                        placeholder(android.R.drawable.ic_menu_gallery)
-                        error(android.R.drawable.ic_menu_report_image)
+                        placeholder(R.drawable.ic_menu_gallery)
+                        error(R.drawable.ic_menu_report_image)
                         // 设置内存优化参数
                         allowHardware(false) // 对于大图，避免使用硬件层
                         allowRgb565(true) // 使用 RGB565 格式减少内存占用
@@ -106,22 +105,22 @@ class PhotoDetailActivity : AppCompatActivity() {
 
     private fun loadWithFallbackSettings(uri: Uri, imageView: ZoomableImageView) {
         imageView.load(uri) {
-            size(Size.ORIGINAL) // 使用原始尺寸但配合采样
+            size(Size.Companion.ORIGINAL) // 使用原始尺寸但配合采样
             listener(
                 onSuccess = { _, _ -> /* 已经调用了 startPostponedEnterTransition */ },
                 onError = { _, _ ->
                     // 最后的fallback：显示错误图片
-                    imageView.setImageResource(android.R.drawable.ic_menu_report_image)
+                    imageView.setImageResource(R.drawable.ic_menu_report_image)
                 }
             )
             crossfade(false) // 禁用淡入效果以提高性能
-            placeholder(android.R.drawable.ic_menu_gallery)
-            error(android.R.drawable.ic_menu_report_image)
+            placeholder(R.drawable.ic_menu_gallery)
+            error(R.drawable.ic_menu_report_image)
             // Coil 会自动处理大图的内存优化
         }
     }
 
-    
+
     private fun sharePhoto(uri: Uri) {
         val shareIntent: Intent = Intent().apply {
             action = Intent.ACTION_SEND

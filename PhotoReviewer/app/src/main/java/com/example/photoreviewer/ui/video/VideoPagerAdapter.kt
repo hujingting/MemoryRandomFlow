@@ -1,9 +1,9 @@
-
-package com.example.photoreviewer.ui
+package com.example.photoreviewer.ui.video
 
 import android.net.Uri
 import androidx.fragment.app.Fragment
 import androidx.viewpager2.adapter.FragmentStateAdapter
+import com.example.photoreviewer.ui.video.VideoPlayerFragment
 
 class VideoPagerAdapter(fragment: Fragment) : FragmentStateAdapter(fragment) {
 
@@ -39,6 +39,6 @@ class VideoPagerAdapter(fragment: Fragment) : FragmentStateAdapter(fragment) {
 
     override fun createFragment(position: Int): Fragment {
         val videoUri = videoUris[position]
-        return VideoPlayerFragment.newInstance(videoUri)
+        return VideoPlayerFragment.Companion.newInstance(videoUri)
     }
 }
