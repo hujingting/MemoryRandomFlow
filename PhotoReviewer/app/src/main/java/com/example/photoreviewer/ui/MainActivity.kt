@@ -1,11 +1,13 @@
 package com.example.photoreviewer.ui
 
-import VideoFragment
+import com.example.photoreviewer.ui.video.VideoFragment
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import com.example.photoreviewer.R
 import com.example.photoreviewer.databinding.ActivityMainBinding
+import com.example.photoreviewer.ui.image.ImageFragment
+import com.example.photoreviewer.ui.mine.MyFragment
 
 class MainActivity : AppCompatActivity() {
 
@@ -14,7 +16,7 @@ class MainActivity : AppCompatActivity() {
 
     // ImageFragment 的实例，预先加载
     private val imageFragment = ImageFragment()
-    // VideoFragment 的实例，延迟加载
+    // com.example.photoreviewer.ui.video.VideoFragment 的实例，延迟加载
     private var videoFragment: VideoFragment? = null
     // MyFragment 的实例，延迟加载
     private var myFragment: MyFragment? = null

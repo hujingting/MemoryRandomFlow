@@ -1,5 +1,4 @@
-
-package com.example.photoreviewer.ui
+package com.example.photoreviewer.ui.video
 
 import android.net.Uri
 import android.os.Bundle

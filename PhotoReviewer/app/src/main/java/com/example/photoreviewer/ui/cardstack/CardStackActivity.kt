@@ -1,10 +1,8 @@
-package com.example.photoreviewer.cardstack
+package com.example.photoreviewer.ui.cardstack
 
 import android.animation.ObjectAnimator
 import android.os.Bundle
-import android.view.View
 import androidx.appcompat.app.AppCompatActivity
-import com.example.photoreviewer.R
 import com.example.photoreviewer.databinding.ActivityCardStackBinding
 
 class CardStackActivity : AppCompatActivity() {

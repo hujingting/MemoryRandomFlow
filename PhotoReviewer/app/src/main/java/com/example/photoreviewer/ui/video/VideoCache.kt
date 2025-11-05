@@ -1,5 +1,4 @@
-
-package com.example.photoreviewer.ui
+package com.example.photoreviewer.ui.video
 
 import android.content.Context
 import androidx.media3.database.ExoDatabaseProvider
@@ -17,7 +16,11 @@ object VideoCache {
         if (simpleCache == null) {
             val cacheDirectory = File(context.cacheDir, "media")
             val databaseProvider = ExoDatabaseProvider(context)
-            simpleCache = SimpleCache(cacheDirectory, LeastRecentlyUsedCacheEvictor(MAX_CACHE_SIZE), databaseProvider)
+            simpleCache = SimpleCache(
+                cacheDirectory,
+                LeastRecentlyUsedCacheEvictor(MAX_CACHE_SIZE),
+                databaseProvider
+            )
         }
         return simpleCache!!
     }

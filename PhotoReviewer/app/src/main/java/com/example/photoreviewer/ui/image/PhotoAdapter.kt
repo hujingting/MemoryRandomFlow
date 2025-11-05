@@ -1,4 +1,4 @@
-package com.example.photoreviewer.ui
+package com.example.photoreviewer.ui.image
 
 import android.app.Activity
 import android.app.ActivityOptions
@@ -8,12 +8,9 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
-import androidx.media3.common.MediaItem
-import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import androidx.recyclerview.widget.RecyclerView
 import coil.load
-import com.example.photoreviewer.ui.PhotoDetailActivity
 import com.example.photoreviewer.R
 
 class PhotoAdapter(
@@ -34,7 +31,7 @@ class PhotoAdapter(
         holder.bind(photoUri)
         holder.itemView.setOnClickListener {
             val context = holder.itemView.context
-            val intent = PhotoDetailActivity.newIntent(context, photoUri)
+            val intent = PhotoDetailActivity.Companion.newIntent(context, photoUri)
 
             val options = ActivityOptions.makeSceneTransitionAnimation(
                 context as Activity,

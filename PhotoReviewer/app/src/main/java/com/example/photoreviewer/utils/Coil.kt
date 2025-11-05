@@ -1,14 +1,14 @@
-package com.example.photoreviewer
+package com.example.photoreviewer.utils
 
 import android.content.Context
 import android.os.Build
 import coil.ImageLoader
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
+import coil.disk.DiskCache
 import coil.memory.MemoryCache
 import coil.request.CachePolicy
 import coil.size.Precision
-import coil.size.Scale
 
 object Coil {
     fun newImageLoader(context: Context): ImageLoader {
@@ -26,7 +26,7 @@ object Coil {
                     .build()
             }
             .diskCache {
-                coil.disk.DiskCache.Builder()
+                DiskCache.Builder()
                     .directory(context.cacheDir.resolve("image_cache"))
                     .maxSizeBytes(512L * 1024 * 1024) // 512MB 磁盘缓存
                     .build()
@@ -54,7 +54,7 @@ object Coil {
                     .build()
             }
             .diskCache {
-                coil.disk.DiskCache.Builder()
+                DiskCache.Builder()
                     .directory(context.cacheDir.resolve("image_cache"))
                     .maxSizeBytes(512L * 1024 * 1024)
                     .build()

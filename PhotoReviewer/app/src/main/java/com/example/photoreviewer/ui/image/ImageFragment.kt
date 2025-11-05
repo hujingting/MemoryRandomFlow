@@ -1,10 +1,11 @@
-package com.example.photoreviewer.ui
+package com.example.photoreviewer.ui.image
 
 import android.Manifest
 import android.animation.ValueAnimator
 import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.graphics.ImageDecoder
 import android.graphics.drawable.ColorDrawable
 import android.net.Uri
@@ -14,6 +15,7 @@ import android.provider.MediaStore
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
@@ -31,8 +33,10 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.PagerSnapHelper
 import androidx.recyclerview.widget.RecyclerView
 import com.example.photoreviewer.R
-import com.example.photoreviewer.cardstack.CardStackActivity
 import com.example.photoreviewer.databinding.FragmentImageBinding
+import com.example.photoreviewer.ui.image.SwipeCallback
+import com.example.photoreviewer.ui.cardstack.CardStackActivity
+import com.example.photoreviewer.viewmodel.DeletionRequest
 import com.example.photoreviewer.viewmodel.PhotoType
 import com.example.photoreviewer.viewmodel.PhotoViewModel
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -204,7 +208,7 @@ class ImageFragment : Fragment() {
                 val palette = bitmapPalette(uri)
                 palette.dominantSwatch?.rgb?.let { color ->
                     val oldColor = (binding.root.background as? ColorDrawable)?.color
-                        ?: android.graphics.Color.TRANSPARENT
+                        ?: Color.TRANSPARENT
                     val newColor = ColorUtils.setAlphaComponent(color, 204)
 
                     val colorAnimation = ValueAnimator.ofArgb(oldColor, newColor)
@@ -256,9 +260,9 @@ class ImageFragment : Fragment() {
                 }
                 launch {
                     viewModel.deletionRequest.collectLatest { request ->
-                        if (request is com.example.photoreviewer.viewmodel.DeletionRequest.RequiresPendingIntent) {
+                        if (request is DeletionRequest.RequiresPendingIntent) {
                             val intentSenderRequest =
-                                androidx.activity.result.IntentSenderRequest.Builder(request.intent)
+                                IntentSenderRequest.Builder(request.intent)
                                     .build()
                             deleteRequestLauncher.launch(intentSenderRequest)
                         }

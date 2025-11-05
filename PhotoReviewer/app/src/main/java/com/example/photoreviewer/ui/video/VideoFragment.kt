@@ -1,3 +1,5 @@
+package com.example.photoreviewer.ui.video
+
 import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -10,7 +12,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.viewpager2.widget.ViewPager2
 import com.example.photoreviewer.databinding.FragmentVideoBinding
-import com.example.photoreviewer.ui.VideoPagerAdapter
 import com.example.photoreviewer.viewmodel.VideoViewModel
 import kotlinx.coroutines.launch
 
@@ -49,11 +50,11 @@ class VideoFragment : Fragment() {
     }
 
     private fun setupButtons() {
-        binding.btnRandom.setOnClickListener { 
+        binding.btnRandom.setOnClickListener {
             viewModel.loadVideos()
         }
 
-        binding.btnShare.setOnClickListener { 
+        binding.btnShare.setOnClickListener {
             val currentPosition = binding.videoViewPager.currentItem
             val currentVideoUri = videoAdapter.videoUris[currentPosition]
             val shareIntent = Intent(Intent.ACTION_SEND).apply {

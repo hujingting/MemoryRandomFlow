@@ -1,4 +1,4 @@
-package com.example.photoreviewer.ui
+package com.example.photoreviewer.ui.image
 
 import android.content.Context
 import android.graphics.Canvas
