@@ -44,6 +44,7 @@ class VideoFragment : Fragment() {
     private fun setupViewPager() {
         videoAdapter = VideoPagerAdapter(this)
         binding.videoViewPager.apply {
+            offscreenPageLimit = 1
             adapter = videoAdapter
             orientation = ViewPager2.ORIENTATION_VERTICAL
         }

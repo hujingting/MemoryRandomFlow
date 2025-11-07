@@ -44,7 +44,7 @@ class VideoPlayerFragment : Fragment() {
 
     override fun onPause() {
         super.onPause()
-        releasePlayer()
+        player?.pause()
     }
 
     private fun initializePlayer() {
@@ -85,6 +85,7 @@ class VideoPlayerFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        releasePlayer()
         _binding = null
     }
 
