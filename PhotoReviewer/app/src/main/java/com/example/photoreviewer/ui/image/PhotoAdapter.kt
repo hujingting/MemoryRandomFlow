@@ -33,12 +33,13 @@ class PhotoAdapter(
             val context = holder.itemView.context
             val intent = PhotoDetailActivity.Companion.newIntent(context, photoUri)
 
-            val options = ActivityOptions.makeSceneTransitionAnimation(
-                context as Activity,
-                holder.imageView,
-                "photo_transition"
-            )
-            context.startActivity(intent, options.toBundle())
+//            val options = ActivityOptions.makeSceneTransitionAnimation(
+//                context as Activity,
+//                holder.imageView,
+//                "photo_transition"
+//            )
+//            context.startActivity(intent, options.toBundle())
+            context.startActivity(intent)
         }
     }
 

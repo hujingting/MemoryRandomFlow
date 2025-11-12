@@ -4,14 +4,11 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Foreground Photo -->
-<!--    android:background="?android:colorBackground"-->
-    <ImageView
+    <androidx.appcompat.widget.AppCompatImageView
         android:id="@+id/photo_image_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:scaleType="fitCenter"
-        android:transitionName="photo_transition" />
+        android:scaleType="fitCenter" />
 
     <androidx.media3.ui.PlayerView
         android:id="@+id/player_view"
