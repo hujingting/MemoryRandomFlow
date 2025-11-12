@@ -8,6 +8,7 @@ import com.example.photoreviewer.R
 import com.example.photoreviewer.databinding.ActivityMainBinding
 import com.example.photoreviewer.ui.image.ImageFragment
 import com.example.photoreviewer.ui.mine.MyFragment
+import com.example.photoreviewer.ui.video.PlayerManager
 
 class MainActivity : AppCompatActivity() {
 
@@ -68,5 +69,18 @@ class MainActivity : AppCompatActivity() {
         supportFragmentManager.beginTransaction().hide(activeFragment).show(fragment).commit()
         // 更新当前活动的 Fragment
         activeFragment = fragment
+
+//        if (!isVideoFragment()) {
+//            videoFragment?.pauseVideo()
+//        }
+    }
+
+    fun isVideoFragment() : Boolean {
+        return activeFragment == videoFragment
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        PlayerManager.releasePlayer()
     }
 }

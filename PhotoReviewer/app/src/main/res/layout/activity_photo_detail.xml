@@ -6,11 +6,15 @@
     android:background="@android:color/black"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
-    <com.example.photoreviewer.ui.image.ZoomableImageView
+<!--    <io.getstream.photoview.PhotoView-->
+<!--        android:id="@+id/photo_detail_view"-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="match_parent" />-->
+
+    <com.github.panpf.zoomimage.CoilZoomImageView
         android:id="@+id/photo_detail_view"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:transitionName="photo_transition" />
+        android:layout_height="match_parent" />
 
     <LinearLayout
         android:layout_width="match_parent"

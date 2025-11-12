@@ -1,3 +1,4 @@
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -75,6 +76,11 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
 
+    // 集成 Coil v2 单例模式，提供 CoilZoomImageView 组件
+    val LAST_VERSION = "1.4.0"
+    implementation("io.github.panpf.zoomimage:zoomimage-view-coil2:${LAST_VERSION}")
+    // 集成 Coil v2 core，提供 CoilZoomImageView 组件
+    implementation("io.github.panpf.zoomimage:zoomimage-view-coil2-core:${LAST_VERSION}")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")

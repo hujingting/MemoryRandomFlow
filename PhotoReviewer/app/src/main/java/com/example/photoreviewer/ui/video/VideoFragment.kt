@@ -44,6 +44,7 @@ class VideoFragment : Fragment() {
     private fun setupViewPager() {
         videoAdapter = VideoPagerAdapter(this)
         binding.videoViewPager.apply {
+            offscreenPageLimit = 1
             adapter = videoAdapter
             orientation = ViewPager2.ORIENTATION_VERTICAL
         }
@@ -80,6 +81,10 @@ class VideoFragment : Fragment() {
                 }
             }
         }
+    }
+
+    fun pauseVideo() {
+        videoAdapter.currentFragment?.pauseVideo()
     }
 
     override fun onDestroyView() {
