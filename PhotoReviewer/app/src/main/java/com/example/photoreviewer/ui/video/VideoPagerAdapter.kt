@@ -9,6 +9,8 @@ class VideoPagerAdapter(fragment: Fragment) : FragmentStateAdapter(fragment) {
 
     var videoUris: List<Uri> = emptyList()
 
+    var currentFragment: VideoPlayerFragment? = null
+
     fun submitList(newUris: List<Uri>) {
         val oldUris = videoUris
 
@@ -39,6 +41,7 @@ class VideoPagerAdapter(fragment: Fragment) : FragmentStateAdapter(fragment) {
 
     override fun createFragment(position: Int): Fragment {
         val videoUri = videoUris[position]
-        return VideoPlayerFragment.Companion.newInstance(videoUri)
+        currentFragment = VideoPlayerFragment.Companion.newInstance(videoUri)
+        return currentFragment!!
     }
 }

@@ -15,6 +15,7 @@
         app:show_previous_button="false"
         app:show_fastforward_button="false"
         app:show_rewind_button="false"
+        app:auto_show="false"
         app:show_buffering="when_playing" />
 
 </FrameLayout>

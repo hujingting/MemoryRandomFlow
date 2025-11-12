@@ -8,6 +8,7 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.media3.common.MediaItem
 import com.example.photoreviewer.databinding.FragmentVideoPlayerBinding
+import com.example.photoreviewer.ui.MainActivity
 
 class VideoPlayerFragment : Fragment() {
 
@@ -34,11 +35,18 @@ class VideoPlayerFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         initializePlayer()
-        binding.playerView.onPause()
+
+        if ((activity as MainActivity).isVideoFragment()) {
+            binding.playerView.player?.play()
+        }
     }
 
     override fun onPause() {
         super.onPause()
+        pauseVideo()
+    }
+
+    fun pauseVideo() {
         binding.playerView.player?.pause()
         binding.playerView.player = null
     }
@@ -50,7 +58,7 @@ class VideoPlayerFragment : Fragment() {
             val mediaItem = MediaItem.fromUri(videoUri!!)
             player.setMediaItem(mediaItem)
             player.prepare()
-            player.play()
+//            player.play()
         }
     }
 

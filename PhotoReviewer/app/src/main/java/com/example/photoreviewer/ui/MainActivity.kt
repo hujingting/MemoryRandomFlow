@@ -69,6 +69,14 @@ class MainActivity : AppCompatActivity() {
         supportFragmentManager.beginTransaction().hide(activeFragment).show(fragment).commit()
         // 更新当前活动的 Fragment
         activeFragment = fragment
+
+//        if (!isVideoFragment()) {
+//            videoFragment?.pauseVideo()
+//        }
+    }
+
+    fun isVideoFragment() : Boolean {
+        return activeFragment == videoFragment
     }
 
     override fun onDestroy() {

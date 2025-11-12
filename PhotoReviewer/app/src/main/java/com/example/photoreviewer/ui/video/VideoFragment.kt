@@ -83,6 +83,10 @@ class VideoFragment : Fragment() {
         }
     }
 
+    fun pauseVideo() {
+        videoAdapter.currentFragment?.pauseVideo()
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
