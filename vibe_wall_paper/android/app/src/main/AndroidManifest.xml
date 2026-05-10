@@ -6,7 +6,7 @@
     <!-- Legacy write permission for older Android versions -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
     <application
-        android:label="vibe_wall_paper"
+        android:label="VibeWall"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
